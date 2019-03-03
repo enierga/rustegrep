@@ -1,7 +1,7 @@
 [package]
 name = "thegrep"
 version = "1.0.0"
-authors = ["Someone Awesome <you@cs.unc.edu>"]
+authors = ["Vincent Enierga <venierga@email.unc.edu>"]
 edition = "2018"
 
 [dependencies]
