@@ -10,7 +10,7 @@
  * to this code to anyone other than the course staff and partner.
  */
 extern crate structopt;
-const QUIT_STRING: &str = "quit\n";
+
 const EXIT_OK: i32 = 0;
 const EXIT_ERR: i32 = 1;
 
@@ -59,11 +59,7 @@ fn eval(input: &str, options: &Options) {
 
 // print helpers for each flag
 fn eval_help() {
-    #[derive(struct)]
-    #[structopt(name = "help")]
-    /// thegrep
     struct Help {
-        #[structopt(short = "b")]
         /// USAGE:
         ///     thegrep [FLAGS] <pattern>
         ///
@@ -98,9 +94,6 @@ fn eval_parse(input: &str) {
 }
 
 fn eval_version() {
-    #[derive(struct)]
-    #[structopt(name = "version")]
-    /// thegrep 1.0.0
     struct Version {
         /// Tar Heel egrep
         bar: String
