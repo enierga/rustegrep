@@ -20,9 +20,13 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 #[structopt(name = "thegrep", about = "Tar Heel egrep")]
 struct Options {
+    /// Regular Expression Pattern
+    pattern: String,
     #[structopt(short = "p", long = "parse")]
+    /// Show Parsed AST
     parse: bool,
     #[structopt(short = "t", long = "tokens")]
+    /// Show Tokens
     tokens: bool,
 }
 
@@ -33,9 +37,7 @@ use self::parser::Parser;
 
 fn main() {
     let options = Options::from_args();
-    loop {
-        eval(&read(), &options);
-    }
+    eval(&read(), &options);
 }
 
 fn eval(input: &str, options: &Options) {

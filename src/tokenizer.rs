@@ -3,7 +3,7 @@ use std::str::Chars;
 
 /**
  * Tar Heel egrep: Tokenizer
- * 
+ *
  */
 
 #[derive(Debug, PartialEq)]
@@ -44,6 +44,70 @@ impl<'str> Iterator for Tokenizer<'str> {
         } else {
             None
         }
+    }
+}
+
+/** test the 'next' method above */
+#[cfg(test)]
+mod tokenizer {
+    use super::*;
+
+    #[test]
+    fn empty() {
+        let mut tokens = Tokenizer::new("");
+        assert_eq!(tokens.next(), None);
+        assert_eq!(tokens.next(), None);
+    }
+
+    #[test]
+    fn parentheses_w_chars() {
+        let mut tokens = Tokenizer::new("(yuh)");
+        assert_eq!(tokens.next(), Some(Token::LParen));
+        assert_eq!(tokens.next(), Some(Token::Char('y')));
+        assert_eq!(tokens.next(), Some(Token::Char('u')));
+        assert_eq!(tokens.next(), Some(Token::Char('h')));
+        assert_eq!(tokens.next(), Some(Token::RParen));
+        assert_eq!(tokens.next(), None);
+    }
+
+    #[test]
+    fn union_w_chars() {
+        let mut tokens = Tokenizer::new("y|n");
+        assert_eq!(tokens.next(), Some(Token::Char('y')));
+        assert_eq!(tokens.next(), Some(Token::UnionBar));
+        assert_eq!(tokens.next(), Some(Token::Char('n')));
+        assert_eq!(tokens.next(), None);
+    }
+
+    #[test]
+    fn kleene_star_w_char() { 
+        let mut tokens = Tokenizer::new("x*");
+        assert_eq!(tokens.next(), Some(Token::Char('x')));
+        assert_eq!(tokens.next(), Some(Token::KleeneStar));
+        assert_eq!(tokens.next(), None);
+    }
+
+    #[test]
+    fn any_char_w_chars() {
+        let mut tokens = Tokenizer::new("a.b");
+        assert_eq!(tokens.next(), Some(Token::Char('a')));
+        assert_eq!(tokens.next(), Some(Token::AnyChar));
+        assert_eq!(tokens.next(), Some(Token::Char('b')));
+        assert_eq!(tokens.next(), None);
+    }
+
+    #[test]
+    fn all_tokens() {
+        let mut tokens = Tokenizer::new("(a|b).c*");
+        assert_eq!(tokens.next(), Some(Token::LParen));
+        assert_eq!(tokens.next(), Some(Token::Char('a')));
+        assert_eq!(tokens.next(), Some(Token::UnionBar));
+        assert_eq!(tokens.next(), Some(Token::Char('b')));
+        assert_eq!(tokens.next(), Some(Token::RParen));
+        assert_eq!(tokens.next(), Some(Token::AnyChar));
+        assert_eq!(tokens.next(), Some(Token::Char('c')));
+        assert_eq!(tokens.next(), Some(Token::KleeneStar));
+        assert_eq!(tokens.next(), None);
     }
 }
 
@@ -95,4 +159,47 @@ impl<'str> Tokenizer<'str> {
         let c = self.chars.next().unwrap();
         Token::Char(c)
     }
+}
+
+/** add tests for helper methods */
+#[cfg(test)]
+mod tokenizer_helpers{
+    use super::*;
+
+    #[test]
+    fn parentheses() {
+        let mut tokens = Tokenizer::new("()");
+        assert_eq!(tokens.paren(), Token::LParen);
+        assert_eq!(tokens.paren(), Token::RParen);
+        assert_eq!(tokens.next(), None);
+    }
+
+    #[test]
+    fn union() {
+        let mut tokens = Tokenizer::new("|");
+        assert_eq!(tokens.union(), Token::UnionBar);
+        assert_eq!(tokens.next(), None);
+    }
+
+    #[test]
+    fn kleene() {
+        let mut tokens = Tokenizer::new("*");
+        assert_eq!(tokens.kleene(), Token::KleeneStar);
+        assert_eq!(tokens.next(), None);
+    }
+
+    #[test]
+    fn any_char() {
+        let mut tokens = Tokenizer::new(".");
+        assert_eq!(tokens.any_char(), Token::AnyChar);
+        assert_eq!(tokens.next(), None);
+    }
+
+    #[test]
+    fn other_char() {
+        let mut tokens = Tokenizer::new("a");
+        assert_eq!(tokens.other_chars(), Token::Char('a'));
+        assert_eq!(tokens.next(), None);
+    }
+
 }

@@ -55,7 +55,52 @@ impl<'tokens> Parser<'tokens> {
 }
 
 /** write tests here for public api */
+#[cfg(test)]
+mod parser_parse {
+    use super::*;
 
+    #[test]
+    fn simple_cat() {
+        let par = Parser::parse(Tokenizer::new("aa")).unwrap();
+        assert_eq!(cat(cha('a'), cha('a')), par);
+    }
+
+    #[test]
+    fn simple_alt() {
+        let par = Parser::parse(Tokenizer::new("a|b")).unwrap();
+        assert_eq!(alt(cha('a'), cha('b')), par);
+    }
+
+    #[test]
+    fn simple_clo() {
+        let par = Parser::parse(Tokenizer::new("a*")).unwrap();
+        assert_eq!(clo(cha('a')), par);
+    }
+
+    #[test]
+    fn multi_cat() {
+        let par = Parser::parse(Tokenizer::new("abc")).unwrap();
+        assert_eq!(cat(cha('a'), cat(cha('b'), cha('c'))), par);
+    }
+
+    #[test]
+    fn multi_alt() {
+        let par = Parser::parse(Tokenizer::new("a|b|c")).unwrap();
+        assert_eq!(alt(cha('a'), alt(cha('b'), cha('c'))), par);
+    }
+
+    #[test]
+    fn cat_anychar() {
+        let par = Parser::parse(Tokenizer::new("a.*")).unwrap();
+        assert_eq!(cat(cha('a'), clo(AST::AnyChar)), par);
+    }
+
+    #[test] // this is almost absurdly long but i guess it was good practice to parse through lol
+    fn everything() {
+        let par = Parser::parse(Tokenizer::new("b(oo*|a).m")).unwrap();
+        assert_eq!(cat(cha('b'), cat(alt(cat(cha('o'), clo(cha('o'))), cha('a')), cat(AST::AnyChar, cha('m')))), par);
+    }
+}
 
 // this is the recursive descent chain for parsing
 impl <'tokens> Parser<'tokens> {
@@ -127,6 +172,22 @@ impl <'tokens> Parser<'tokens> {
 }
 
 /** write tests for private api */
+#[cfg(test)]
+mod parser_recur {
+    use super::*;
+
+    #[test]
+    fn clear_paren() {
+        assert_eq!(Parser::from("a").atom().unwrap(), cha('a'));
+        assert_eq!(Parser::from("(a)").atom().unwrap(), cha('a'));
+        assert_eq!(Parser::from("((a))").atom().unwrap(), cha('a'));
+    }
+
+    #[test]
+    fn empty_paren() {
+        assert_eq!(Parser::from("()").atom(), Err(String::from("Unexpected token: RParen")));
+    }
+}
 
 
 // helper methods to make parsing a tad easier
