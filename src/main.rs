@@ -20,14 +20,15 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 #[structopt(name = "thegrep", about = "Tar Heel egrep")]
 struct Options {
-    /// Regular Expression Pattern
-    pattern: String,
     #[structopt(short = "p", long = "parse")]
     /// Show Parsed AST
     parse: bool,
     #[structopt(short = "t", long = "tokens")]
     /// Show Tokens
     tokens: bool,
+
+    /// Regular Expression Pattern
+    pattern: String,
 }
 
 pub mod tokenizer;
@@ -37,7 +38,8 @@ use self::parser::Parser;
 
 fn main() {
     let options = Options::from_args();
-    eval(&read(), &options);
+    let input = Options::from_args().pattern;
+    eval(&input, &options);
 }
 
 fn eval(input: &str, options: &Options) {
@@ -66,23 +68,4 @@ fn eval_parse(input: &str) {
         Err(error) => eprintln!("thegrep: {}", error),
     }
     print!("\n");
-}
-
-fn read() -> String {
-    match read_line() {
-        Ok(line) => {
-            return line;
-            std::process::exit(EXIT_OK);
-        }
-        Err(error) => {
-            eprintln!("Err: {}", error);
-            std::process::exit(EXIT_ERR);
-        }
-    }
-}
-
-fn read_line() -> Result<String, io::Error> {
-    let mut input = String::new();
-    io::stdin().read_line(&mut input)?;
-    Ok(input)
 }
