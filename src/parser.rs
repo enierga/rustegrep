@@ -112,7 +112,7 @@ impl <'tokens> Parser<'tokens> {
             match t {
                 Token::UnionBar => {
                     self.consume_token(Token::UnionBar);
-                    Ok(alt(cat_result, self.reg_expr().unwrap()))
+                    Ok(alt(cat_result, self.reg_expr()?))
                 },
                 _ => Ok(cat_result),
             }
@@ -161,7 +161,7 @@ impl <'tokens> Parser<'tokens> {
         match t {
             Token::LParen => {
                 let expr =  self.reg_expr();
-                self.consume_token(Token::RParen);
+                self.consume_token(Token::RParen)?;
                 expr
             },
             Token::AnyChar => Ok(AST::AnyChar),
@@ -185,7 +185,22 @@ mod parser_recur {
 
     #[test]
     fn empty_paren() {
-        assert_eq!(Parser::from("()").atom(), Err(String::from("Unexpected token: RParen")));
+        assert_eq!(Parser::from("()").atom(), Err(String::from("Unexpected end of input")));
+    }
+
+    #[test]
+    fn kleene_no_char() {
+        assert_eq!(Parser::from("*").atom(), Err(String::from("Unexpected token: KleeneStar")));
+    }
+
+    #[test]
+    fn no_union() {
+        assert_eq!(Parser::from("a|").reg_expr(), Err(String::from("Unexpected end of input")));
+    }
+
+    #[test]
+    fn unclosed_paren() {
+        assert_eq!(Parser::from("(a").atom(), Err(String::from("Unexpected end of input")));
     }
 }
 
