@@ -63,36 +63,36 @@ impl<'str> Tokenizer<'str> {
         match c {
             '(' => Token::LParen,
             ')' => Token::RParen,
-            _ => panic!("Paren: this isnt supposed to happen"),
+            _ => panic!("Expected parentheses"),
         }
     }
 
     fn union(&mut self) -> Token {
         let c = self.chars.next().unwrap();
         if c != '|' {
-            panic!("Union: this isnt supposed to happen");
+            panic!("Expected union bar");
         }
         Token::UnionBar
     }
 
-    fn kleene(&mut self) {
+    fn kleene(&mut self) -> Token {
         let c = self.chars.next().unwrap();
         if c != '*' {
-            panic!("Kleene Star: this isnt supposed to happen");
+            panic!("Expected Kleene star");
         }
         Token::KleeneStar
     }
 
-    fn any_char(&mut self) {
+    fn any_char(&mut self) -> Token {
         let c = self.chars.next().unwrap();
         if c != '.' {
-            panic!("Any Char: this isnt supposed to happen");
+            panic!("Expected any char");
         }
         Token::AnyChar
     }
 
-    fn other_chars(&mut self) {
-        let c = self.chars.next.unwrap();
+    fn other_chars(&mut self) -> Token {
+        let c = self.chars.next().unwrap();
         Token::Char(c)
     }
 }

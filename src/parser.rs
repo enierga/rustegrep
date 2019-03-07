@@ -32,7 +32,7 @@ pub fn cha(c: char) -> AST {
     AST::Char(c)
 }
 
-// dont really need one for AnyChar
+// dont really need factory for AnyChar
 
 pub struct Parser<'tokens> {
     tokens: Peekable<Tokenizer<'tokens>>,
@@ -45,11 +45,12 @@ impl<'tokens> Parser<'tokens> {
         };
 
         // start of recursive descent parsing, also checks if any tokens not parse at end
-        let out = parser.reg_expr();
-        if let Some(token) = parser.token.peek() {
+        let out = parser.reg_expr()?;
+        if let Some(token) = parser.tokens.peek() {
             Err(format!("Expected end of input, found {:?}", token))
+        } else {
+            Ok(out)
         }
-        out
     }
 }
 
@@ -62,11 +63,11 @@ impl <'tokens> Parser<'tokens> {
     // RegExpr ::= Catenation (UnionBar RegExpr)?
     fn reg_expr(&mut self) -> Result<AST, String> {
         let cat_result = self.catenation()?;
-        if let Some(t) = self.peek_next() {
+        if let Some(t) = self.tokens.peek() {
             match t {
                 Token::UnionBar => {
                     self.consume_token(Token::UnionBar);
-                    alt(cat_result, self.reg_expr().unwrap())
+                    Ok(alt(cat_result, self.reg_expr().unwrap()))
                 },
                 _ => Ok(cat_result),
             }
@@ -79,16 +80,13 @@ impl <'tokens> Parser<'tokens> {
     // Catenation ::= Closure (Catenation)?
     fn catenation(&mut self) -> Result<AST, String> {
         let clo_result = self.closure()?;
-        if let Some(t) = self.peek_next() {
+        if let Some(t) = self.tokens.peek() {
             match t {
                 Token::LParen => {
-                    self.consume_token(Token::LParen);
-                    return Ok(cat(clo_result, self.catenation()));
-                    self.consume_token(Token::RParen);
+                    Ok(cat(clo_result, self.catenation().unwrap()))
                 },
-                Token::AnyChar | Token::Char(c) => {
-                    Ok(cat(clo_result, self.catenation()))
-                },
+                Token::AnyChar => Ok(cat(clo_result, self.catenation().unwrap())),
+                Token::Char(c) => Ok(cat(clo_result, self.catenation().unwrap())),
                 _ => Ok(clo_result),
             }
         } else {
@@ -99,11 +97,11 @@ impl <'tokens> Parser<'tokens> {
     // Closure ::= Atom [KleeneStar]?
     fn closure(&mut self) -> Result<AST, String> {
         let atom_result = self.atom()?;
-        if let Some(t) = self.peek_next() {
+        if let Some(t) = self.tokens.peek() {
             match t {
                 Token::KleeneStar => {
                     self.consume_token(Token::KleeneStar);
-                    clo(atom_result)
+                    Ok(clo(atom_result))
                 },
                 _ => Ok(atom_result),
             }
@@ -117,8 +115,9 @@ impl <'tokens> Parser<'tokens> {
         let t = self.take_next_token()?;
         match t {
             Token::LParen => {
-                return Ok(self.reg_expr());
+                let expr =  self.reg_expr();
                 self.consume_token(Token::RParen);
+                expr
             },
             Token::AnyChar => Ok(AST::AnyChar),
             Token::Char(c) => Ok(cha(c)),
@@ -144,14 +143,6 @@ impl<'tokens> Parser<'tokens> {
             Ok(token)
         } else {
             Err(String::from("Unexpected end of input"))
-        }
-    }
-
-    fn peek_next(&mut self) -> Option<Token> {
-        if let Some(t) = self.tokens.peek() {
-            Some(*t)
-        } else {
-            None
         }
     }
 
