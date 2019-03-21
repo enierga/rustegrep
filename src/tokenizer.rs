@@ -95,4 +95,42 @@ impl<'str> Tokenizer<'str> {
         let c = self.chars.next.unwrap();
         Token::Char(c)
     }
+
+
+    /**
+     * Unit Tests
+     *
+     */
+    #[cfg(test)]
+    mod iterator {
+        use super::*;
+
+        #[test]
+        fn empty() {
+            let mut tokens = Tokenizer::new("");
+            assert_eq!(tokens.next(), None);
+            assert_eq!(tokens.next(), None);
+        }
+
+        #[test]
+        fn char() {
+            let mut tokens = Tokenizer::new("abc");
+            assert_eq!(tokens.next(), Token::Char('a'));
+            assert_eq!(tokens.next(), Token::Char('b'));
+            assert_eq!(tokens.next(), Token::Char('c'));
+        }
+
+        #[test]
+        fn union_and_paren() {
+            let mut tokens = Tokenizer::new("ab|().*");
+            assert_eq!(tokens.next(), Token::Char('a'));
+            assert_eq!(tokens.next(), Token::Char('b'));
+            assert_eq!(tokens.next(), Token::UnionBar);
+            assert_eq!(tokens.next(), Token::LParen);
+            assert_eq!(tokens.next(), Token::RParen);
+            assert_eq!(tokens.next(), Token::AnyChar);
+            assert_eq!(tokens.next(), Token::KleeneStar);
+        }
+            
+    }
 }
