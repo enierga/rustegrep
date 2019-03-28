@@ -149,6 +149,7 @@ impl NFA {
                 let ends = Vec::new();
                 self.alt_helper(lhs, rhs, ends)
             },
+            AST::Closure(ast) => self.clo_helper(ast),
             node => panic!("Unimplemented branch of gen_fragment: {:?}", node)
         }
     }
@@ -183,32 +184,44 @@ impl NFA {
     fn cat_helper(&mut self, lhs: &AST, rhs: &AST) -> Fragment {
         let left = self.gen_fragment(lhs);
         let right = self.gen_fragment(rhs);
-        if right.start < self.states.len() {
-            self.join_fragment(&left, right.start);
+        if right.start < self.states.len() { // leave last state unjoined so it can later be joing to end
+            self.join_fragment(&left, right.start); // joining these two fragments together
         }
-        Fragment {
+        Fragment {  //  creating fragment that has left's start and right's end
             start: left.start,
             ends: right.ends,
         }
     }
 
     /**
-     * i am now attempting a helper for alternation
+     * helper for alternation
      */
     fn alt_helper(&mut self, lhs: &AST, rhs: &AST, mut ends: Vec<StateId>) -> Fragment {
         let left = self.gen_fragment(lhs);
-        for end in left.ends {
+        for end in left.ends {  // this is meant to "collect" those lose ends from the fragments
             ends.push(end);
         }
         let right = self.gen_fragment(rhs);
         for end in right.ends {
             ends.push(end);
         }
-        let state = self.add(Split(Some(left.start), Some(right.start)));
-
+        let state = self.add(Split(Some(left.start), Some(right.start))); // create split state with left + right
         Fragment {
             start: state,
             ends: ends,
+        }
+    }
+
+    /**
+     * attempting closure helper here (closure = split state + match state)
+     */
+    fn clo_helper(&mut self, ast: &AST) -> Fragment {
+        let kleene_char = self.gen_fragment(ast);   // generate fragment for the closure ast
+        let state = self.add(Split(Some(kleene_char.start), None)); // creating split state with match state at lhs
+        self.join_fragment(&kleene_char, state);    // join closure ast and split state
+        Fragment {
+            start: state,
+            ends: vec![state],
         }
     }
 
