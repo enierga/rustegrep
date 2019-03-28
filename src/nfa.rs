@@ -144,7 +144,11 @@ impl NFA {
                     ends: vec![state],
                 }
             },
-            AST::Catenation(lhs, rhs) => self.cat_help(lhs, rhs),
+            AST::Catenation(lhs, rhs) => self.cat_helper(lhs, rhs),
+            AST::Alternation(lhs,rhs) => {
+                let ends = Vec::new();
+                self.alt_helper(lhs, rhs, ends)
+            },
             node => panic!("Unimplemented branch of gen_fragment: {:?}", node)
         }
     }
@@ -174,15 +178,38 @@ impl NFA {
     }
 
     /**
-     * this is a helper function for catenation (not sure how im going to do this yet)
+     * this is a helper function for catenation
      */
-    fn cat_helper(&mut self, lhs: AST, rhs: AST) -> Fragment {
-        // creating lhs fragment
-        
-
-        // creating rhs fragment
-        
-
-        // joining lhs and rhs fragment
+    fn cat_helper(&mut self, lhs: &AST, rhs: &AST) -> Fragment {
+        let left = self.gen_fragment(lhs);
+        let right = self.gen_fragment(rhs);
+        if right.start < self.states.len() {
+            self.join_fragment(&left, right.start);
+        }
+        Fragment {
+            start: left.start,
+            ends: right.ends,
+        }
     }
+
+    /**
+     * i am now attempting a helper for alternation
+     */
+    fn alt_helper(&mut self, lhs: &AST, rhs: &AST, mut ends: Vec<StateId>) -> Fragment {
+        let left = self.gen_fragment(lhs);
+        for end in left.ends {
+            ends.push(end);
+        }
+        let right = self.gen_fragment(rhs);
+        for end in right.ends {
+            ends.push(end);
+        }
+        let state = self.add(Split(Some(left.start), Some(right.start)));
+
+        Fragment {
+            start: state,
+            ends: ends,
+        }
+    }
+
 }
