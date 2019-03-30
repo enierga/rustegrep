@@ -14,12 +14,18 @@ extern crate structopt;
 const EXIT_OK: i32 = 0;
 const EXIT_ERR: i32 = 1;
 
+pub mod nfa;
+use self::nfa::NFA;
+use self::nfa::helpers::nfa_dot;
 use std::io;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "thegrep", about = "Tar Heel egrep")]
 struct Options {
+    #[structopt(short = "d", long = "dot")]
+    /// Show DOT representation of NFA
+    dot: bool,
     #[structopt(short = "p", long = "parse")]
     /// Show Parsed AST
     parse: bool,
@@ -43,6 +49,9 @@ fn main() {
 }
 
 fn eval(input: &str, options: &Options) {
+    if options.dot {
+        eval_dot(input);
+    }
     if options.parse {
         eval_parse(input);
     }
@@ -68,4 +77,10 @@ fn eval_parse(input: &str) {
         Err(error) => eprintln!("thegrep: {}", error),
     }
     print!("\n");
+}
+
+fn eval_dot(input: &str) {
+    let nfa = NFA::from(&input).unwrap();
+    println!("{}", nfa_dot(&nfa));
+    std::process::exit(0);
 }
