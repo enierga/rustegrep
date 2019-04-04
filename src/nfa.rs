@@ -1,7 +1,7 @@
 pub mod helpers;
 
 // Starter code for PS06 - thegrep
-// 
+//
 // Author(s): Vincent Enierga
 // ONYEN(s): venierga
 //
@@ -10,10 +10,10 @@ pub mod helpers;
 // to this code to anyone other than the course staff and partner.
 //
 
+use self::State::*;
 use super::parser::Parser;
 use super::parser::AST;
 use super::tokenizer::Tokenizer;
-use self::State::*;
 
 /**
  * ===== Public API =====
@@ -56,8 +56,143 @@ impl NFA {
      * input is accepted by the input string.
      */
     pub fn accepts(&self, input: &str) -> bool {
-        false
+        let mut clist = vec![self.start];   // initialize with start StateId
+        let mut input_str = input.chars();
+        let mut input_length = input.chars().count();
+
+        if input_length == 0 {
+            self.empty_str(&mut clist); // handles special cases where input is empty string
+        } else {
+            for c in input_str {    // otherwise, iterate through each character of the input
+                self.accept_helper(c, &mut clist);
+            }
+        }
+
+        let mut result = false;
+        for state_id in clist { // checking for end state in the set of current lists
+            match &self.states[state_id] {
+                State::End => result = true,
+                _ => continue,
+            }
+        }
+        result
     }
+
+    fn empty_str(&self, c_states: &mut Vec<StateId>) {
+        let mut i = 0;
+        while i < 2 {   // only want to loop 2x: to move out of start and to push arms of potential split state
+            match &self.states[c_states[i]] {   // only valid states for empty are start and split
+                State::Start(Some(first_state_id)) => {
+                    c_states.push(*first_state_id); // push first state
+                    c_states.swap_remove(i);
+                },
+                State::Split(Some(left_state_id), Some(right_state_id)) => {    // if closure, empty string can be accepted
+                    c_states.push(*left_state_id);
+                    c_states.swap_remove(i);
+                    c_states.push(*right_state_id);
+                    i += 1;
+                },
+                _ => break, // otherwise break loop and empty string not accepted
+            }
+        }
+
+    }
+
+    fn accept_helper(&self, input_char: char, c_states: &mut Vec<StateId>) {
+        let mut total_current_states = c_states.len();
+        let mut i = 0;
+        loop {
+            if i >= total_current_states {  // checking each state in the list of current states
+                break;
+            }
+            match &self.states[c_states[i]] {
+                State::Start(Some(first_state_id)) => {
+                    c_states.push(*first_state_id); // push the first state
+                    c_states.swap_remove(i);        // replace the start state with the first state
+                },
+                State::Match(char_enum, Some(next_state_id)) => {
+                    match char_enum {
+                        Char::Literal(c) => {
+                            if input_char == *c {
+                                c_states.push(*next_state_id);
+                                c_states.swap_remove(i);
+                            }
+                        },
+                        Char::Any => {
+                            c_states.push(*next_state_id);
+                            c_states.swap_remove(i);
+                        },
+                    }
+                    i += 1; // if match state is ecountered, move to next state
+                },
+                State::Split(Some(left_state_id), Some(right_state_id)) => {
+                    c_states.push(*left_state_id);  // push left state
+                    c_states.swap_remove(i);        // replace split state with left state
+                    c_states.push(*right_state_id); // push right state (doesnt replace anything)
+                    total_current_states += 1;      // increase # total states by 1
+
+                },
+                _ => i += 1,    // for when current states includes a potential end state
+            }
+        }
+    }
+}
+
+/** Tests accepts method */
+#[cfg(test)]
+mod nfa_accepts {
+    use super::*;
+
+    #[test]
+    fn any_char() {
+        let nfa = NFA::from(".").unwrap();
+        assert_eq!(nfa.accepts("a"), true);
+        assert_eq!(nfa.accepts("9"), true);
+        assert_eq!(nfa.accepts(""), false);
+    }
+
+    #[test]
+    fn simple_cat() {
+        let nfa = NFA::from("ab").unwrap();
+        assert_eq!(nfa.accepts("a"), false);
+        assert_eq!(nfa.accepts("ab"), true);
+    }
+
+    #[test]
+    fn simple_alt() {
+        let nfa = NFA::from("a|b").unwrap();
+        assert_eq!(nfa.accepts("a"), true);
+        assert_eq!(nfa.accepts("b"), true);
+    }
+
+    #[test]
+    fn simple_closure() {
+        let nfa = NFA::from("a*").unwrap();
+        assert_eq!(nfa.accepts(""), true);
+        assert_eq!(nfa.accepts("a"), true);
+        assert_eq!(nfa.accepts("aaaaaaa"), true);
+    }
+
+    #[test]
+    fn cat_and_any() {
+        let nfa = NFA::from("a.c").unwrap();
+        assert_eq!(nfa.accepts("abc"), true);
+        assert_eq!(nfa.accepts("a9c"), true);
+    }
+
+    #[test]
+    fn cat_and_closure() {
+        let nfa = NFA::from("a.*c").unwrap();
+        assert_eq!(nfa.accepts("aWHATTHEHECKc"), true);
+    }
+
+    #[test]
+    fn big_boy() {
+        let nfa = NFA::from("s(.)*e").unwrap();
+        assert_eq!(nfa.accepts("sunshine"), true);
+        assert_eq!(nfa.accepts("sale"), true);
+    }
+
 }
 
 /**
@@ -92,7 +227,7 @@ enum Char {
 
 /**
  * Internal representation of a fragment of an NFA being constructed
- * that keeps track of the start ID of the fragment as well as all of 
+ * that keeps track of the start ID of the fragment as well as all of
  * its unjoined end states.
  */
 #[derive(Debug)]
@@ -111,7 +246,7 @@ impl NFA {
     fn new() -> NFA {
         NFA {
             states: vec![],
-            start:  0,
+            start: 0,
         }
     }
 
@@ -136,21 +271,21 @@ impl NFA {
                     start: state,
                     ends: vec![state],
                 }
-            },
+            }
             AST::Char(c) => {
                 let state = self.add(Match(Char::Literal(*c), None));
                 Fragment {
                     start: state,
                     ends: vec![state],
                 }
-            },
+            }
             AST::Catenation(lhs, rhs) => self.cat_helper(lhs, rhs),
-            AST::Alternation(lhs,rhs) => {
+            AST::Alternation(lhs, rhs) => {
                 let ends = Vec::new();
                 self.alt_helper(lhs, rhs, ends)
-            },
+            }
             AST::Closure(ast) => self.clo_helper(ast),
-            node => panic!("Unimplemented branch of gen_fragment: {:?}", node)
+            node => panic!("Unimplemented branch of gen_fragment: {:?}", node),
         }
     }
 
@@ -184,10 +319,12 @@ impl NFA {
     fn cat_helper(&mut self, lhs: &AST, rhs: &AST) -> Fragment {
         let left = self.gen_fragment(lhs);
         let right = self.gen_fragment(rhs);
-        if right.start < self.states.len() { // leave last state unjoined so it can later be joing to end
+        if right.start < self.states.len() {
+            // leave last state unjoined so it can later be joined to end
             self.join_fragment(&left, right.start); // joining these two fragments together
         }
-        Fragment {  //  creating fragment that has left's start and right's end
+        Fragment {
+            //  creating fragment that has left's start and right's end
             start: left.start,
             ends: right.ends,
         }
@@ -198,7 +335,8 @@ impl NFA {
      */
     fn alt_helper(&mut self, lhs: &AST, rhs: &AST, mut ends: Vec<StateId>) -> Fragment {
         let left = self.gen_fragment(lhs);
-        for end in left.ends {  // this is meant to "collect" those lose ends from the fragments
+        for end in left.ends {
+            // this is meant to "collect" those loose ends from the fragments
             ends.push(end);
         }
         let right = self.gen_fragment(rhs);
@@ -216,13 +354,12 @@ impl NFA {
      * attempting closure helper here (closure = split state + match state)
      */
     fn clo_helper(&mut self, ast: &AST) -> Fragment {
-        let kleene_char = self.gen_fragment(ast);   // generate fragment for the closure ast
+        let kleene_char = self.gen_fragment(ast); // generate fragment for the closure ast
         let state = self.add(Split(Some(kleene_char.start), None)); // creating split state with match state at lhs
-        self.join_fragment(&kleene_char, state);    // join closure ast and split state
+        self.join_fragment(&kleene_char, state); // join closure ast and split state
         Fragment {
             start: state,
             ends: vec![state],
         }
     }
-
 }

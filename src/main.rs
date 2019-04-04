@@ -23,6 +23,9 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 #[structopt(name = "thegrep", about = "Tar Heel egrep")]
 struct Options {
+    #[structopt(help = "FILES")]
+    /// Regex text search a file
+    paths: Vec<String>,
     #[structopt(short = "d", long = "dot")]
     /// Show DOT representation of NFA
     dot: bool,
@@ -46,6 +49,16 @@ fn main() {
     let options = Options::from_args();
     let input = Options::from_args().pattern;
     eval(&input, &options);
+
+    let mut mod_input = "(.)*".to_owned();  // modifying input by pushing ANY* to front and end
+    mod_input.push_str(&input);
+    mod_input.push_str(&String::from("(.)*"));
+
+    let result = if options.paths.len() > 0 {
+        print_files(&mod_input, &options)
+    } else {
+        print_stdin(&mod_input)
+    };
 }
 
 fn eval(input: &str, options: &Options) {
@@ -58,6 +71,38 @@ fn eval(input: &str, options: &Options) {
     if options.tokens {
         eval_tokens(input);
     }
+}
+
+use std::fs::File;
+use std::io::BufRead;
+
+// for file input
+fn print_files(input: &str, options: &Options) -> io::Result<()> {
+    for path in options.paths.iter() {
+        let file = File::open(path)?;
+        let reader = io::BufReader::new(file);
+        print_output(input, reader)?;
+    }
+    Ok(())
+}
+
+// for user input
+fn print_stdin(input: &str) -> io::Result<()> {
+    let stdin = io::stdin();
+    let reader = stdin.lock();
+    print_output(input, reader)
+}
+
+// generically printing from different sources with method below (borrowed from lecture 18 lol)
+fn print_output<R: BufRead>(input: &str, reader: R) -> io::Result<()> {
+    let nfa = NFA::from(input).unwrap();
+    for line in reader.lines() {
+        let line_in = &*line?;
+        if nfa.accepts(line_in) {
+            println!("{}", line_in);
+        }
+    }
+    Ok(())
 }
 
 // print helpers for each flag
