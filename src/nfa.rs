@@ -144,6 +144,9 @@ impl NFA {
                 },
                 State::End => {
                     char_match = true;
+                    if c_states.len() == 1 {
+                        c_states.remove(i);
+                    }
                     i += 1;
                 },
                 _ => {
