@@ -196,6 +196,34 @@ mod nfa_tests {
         assert_eq!(true, nfa.accepts(&string));
 
     }
+
+    #[test]
+    fn concatenation_char() {
+        let nfa = NFA::from("bc").unwrap();
+        let string = String::from("abcd");
+        assert_eq!(false, nfa.accepts(&string));
+    }
+
+    #[test]
+    fn any_char_cat() {
+        let nfa = NFA::from(".a.").unwrap();
+        let string = String::from("asd");
+        assert_eq!(false, nfa.accepts(&string));
+    }
+
+    #[test]
+    fn alter_and_cat() {
+        let nfa = NFA::from("a(x|y).").unwrap();
+        let string = String::from("axy");
+        assert_eq!(true, nfa.accepts(&string));
+    }
+
+    #[test]
+    fn simple_alternations() {
+        let nfa = NFA::from("a|b|c|d|e|1|2|3").unwrap();
+        let string = String::from("0a");
+        assert_eq!(false, nfa.accepts(&string));
+    }
 }
     
 /**
