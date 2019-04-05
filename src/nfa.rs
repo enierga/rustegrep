@@ -60,10 +60,8 @@ impl NFA {
         let mut input_str = input.chars();
         let mut input_length = input.chars().count();
 
-        for i in 0..input_length {  // iterates through each character and tests against states
-            if let Some(c) = input_str.next() { // consumes each char as with each iteration
-                self.accept_helper(c, &mut clist);
-            }
+        while let Some(c) = input_str.next() {  // consuming each character and passing it to helper method
+            self.accept_helper(c, &mut clist);
         }
 
         if clist.len() > 0 {    // checks empty string against the states
@@ -133,11 +131,11 @@ impl NFA {
                     total_current_states += 1;      // increase # total states by 1
 
                 },
-                State::End => {
-                    c_states.remove(i); // to be accepted, last char must be at end state
-                    i += 1;
-                },
-                _ => break,
+//                State::End => {
+//                    c_states.remove(i); // to be accepted, last char must be at end state
+//                    i += 1;
+//                },
+                _ => i += 1,
             }
         }
     }
