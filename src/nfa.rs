@@ -60,12 +60,14 @@ impl NFA {
         let mut input_str = input.chars();
         let mut input_length = input.chars().count();
 
-        if input_length == 0 {
-            self.empty_str(&mut clist); // handles special cases where input is empty string
-        } else {
-            for c in input_str {    // otherwise, iterate through each character of the input
+        for i in 0..input_length {  // iterates through each character and tests against states
+            if let Some(c) = input_str.next() {
                 self.accept_helper(c, &mut clist);
             }
+        }
+
+        if clist.len() > 0 {    // checks empty string against the states
+            self.empty_str(&mut clist);
         }
 
         let mut result = false;
@@ -132,7 +134,11 @@ impl NFA {
                     total_current_states += 1;      // increase # total states by 1
 
                 },
-                _ => i += 1,    // for when current states includes a potential end state
+                State::End => {
+                    c_states.remove(i); // to be accepted, last char must be at end state
+                    i += 1;
+                },
+                _ => break,
             }
         }
     }
@@ -181,13 +187,16 @@ mod nfa_accepts {
     }
 
     #[test]
-    fn cat_and_closure() {
-        let nfa = NFA::from("a.*c").unwrap();
-        assert_eq!(nfa.accepts("aWHATTHEHECKc"), true);
+    fn five_letter_starts_with_a() {
+        let nfa = NFA::from("a....").unwrap();
+        assert_eq!(nfa.accepts("apple"), true);
+        assert_eq!(nfa.accepts("apples"), false);
+        assert_eq!(nfa.accepts("ankle"), true);
+        assert_eq!(nfa.accepts("butts"), false);
     }
 
     #[test]
-    fn big_boy() {
+    fn cat_and_closure() {
         let nfa = NFA::from("s(.)*e").unwrap();
         assert_eq!(nfa.accepts("sunshine"), true);
         assert_eq!(nfa.accepts("sale"), true);

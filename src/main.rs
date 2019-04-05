@@ -23,9 +23,6 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 #[structopt(name = "thegrep", about = "Tar Heel egrep")]
 struct Options {
-    #[structopt(help = "FILES")]
-    /// Regex text search a file
-    paths: Vec<String>,
     #[structopt(short = "d", long = "dot")]
     /// Show DOT representation of NFA
     dot: bool,
@@ -38,6 +35,9 @@ struct Options {
 
     /// Regular Expression Pattern
     pattern: String,
+
+    #[structopt(help = "files")]
+    paths: Vec<String>,
 }
 
 pub mod tokenizer;
@@ -49,16 +49,6 @@ fn main() {
     let options = Options::from_args();
     let input = Options::from_args().pattern;
     eval(&input, &options);
-
-    let mut mod_input = "(.)*".to_owned();  // modifying input by pushing ANY* to front and end
-    mod_input.push_str(&input);
-    mod_input.push_str(&String::from("(.)*"));
-
-    let result = if options.paths.len() > 0 {
-        print_files(&mod_input, &options)
-    } else {
-        print_stdin(&mod_input)
-    };
 }
 
 fn eval(input: &str, options: &Options) {
@@ -71,6 +61,16 @@ fn eval(input: &str, options: &Options) {
     if options.tokens {
         eval_tokens(input);
     }
+
+    let mut mod_input = "(.*)".to_owned();  // modifying regex by sandwiching it with ANY*
+    mod_input.push_str(input);
+    mod_input.push_str(&String::from("(.*)"));
+
+    let result = if options.paths.len() > 0 {
+        print_files(&mod_input, options)
+    } else {
+        print_stdin(&mod_input)
+    };
 }
 
 use std::fs::File;
