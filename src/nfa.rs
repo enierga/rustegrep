@@ -61,7 +61,7 @@ impl NFA {
         let mut input_length = input.chars().count();
 
         for i in 0..input_length {  // iterates through each character and tests against states
-            if let Some(c) = input_str.next() {
+            if let Some(c) = input_str.next() { // consumes each char as with each iteration
                 self.accept_helper(c, &mut clist);
             }
         }
@@ -97,14 +97,13 @@ impl NFA {
                 _ => break, // otherwise break loop and empty string not accepted
             }
         }
-
     }
 
     fn accept_helper(&self, input_char: char, c_states: &mut Vec<StateId>) {
         let mut total_current_states = c_states.len();
         let mut i = 0;
         loop {
-            if i >= total_current_states {  // checking each state in the list of current states
+            if i == total_current_states {  // checking each state in the list of current states
                 break;
             }
             match &self.states[c_states[i]] {
@@ -177,6 +176,23 @@ mod nfa_accepts {
         assert_eq!(nfa.accepts(""), true);
         assert_eq!(nfa.accepts("a"), true);
         assert_eq!(nfa.accepts("aaaaaaa"), true);
+    }
+
+    #[test]
+    fn clo_and_any() {
+        let nfa = NFA::from("(.*)a(.*)").unwrap();
+        assert_eq!(nfa.accepts("a"), true);
+        assert_eq!(nfa.accepts("poafs"), true);
+        assert_eq!(nfa.accepts("bruh fucking a ugh why isnt this working"), true);
+    }
+
+    fn test_from_writeup() {
+        let nfa = NFA::from("(.*)aut....a(.*)").unwrap();
+        assert_eq!(nfa.accepts("Chautauqua"), true);
+//        assert_eq!(nfa.accepts("Chautauqua's"), true);
+        assert_eq!(nfa.accepts("automata"), true);
+//        assert_eq!(nfa.accepts("beautification"), true);
+//        assert_eq!(nfa.accepts("beautification's"), true);
     }
 
     #[test]

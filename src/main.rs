@@ -62,14 +62,14 @@ fn eval(input: &str, options: &Options) {
         eval_tokens(input);
     }
 
-    let mut mod_input = "(.*)".to_owned();  // modifying regex by sandwiching it with ANY*
-    mod_input.push_str(input);
-    mod_input.push_str(&String::from("(.*)"));
+//    let mut mod_input = "(.*)".to_owned();  // modifying regex by sandwiching it with ANY*
+//    mod_input.push_str(input);
+//    mod_input.push_str(&String::from("(.*)"));
 
     let result = if options.paths.len() > 0 {
-        print_files(&mod_input, options)
+        print_files(&input, options)
     } else {
-        print_stdin(&mod_input)
+        print_stdin(&input)
     };
 }
 
