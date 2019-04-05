@@ -62,10 +62,14 @@ fn eval(input: &str, options: &Options) {
         eval_tokens(input);
     }
 
+    let mut mod_input = "(.*)".to_owned();
+    mod_input.push_str(input);
+    mod_input.push_str("(.*)");
+
     let result = if options.paths.len() > 0 {
-        print_files(&input, options)
+        print_files(&mod_input, options)
     } else {
-        print_stdin(&input)
+        print_stdin(&mod_input)
     };
 }
 
