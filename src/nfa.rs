@@ -58,10 +58,11 @@ impl NFA {
     pub fn accepts(&self, input: &str) -> bool {
         let mut clist = vec![self.start];   // initialize with start StateId
         let mut input_str = input.chars();
-        let mut input_length = input.chars().count();
+        let input_length = input.chars().count();
+        let mut matches = true;
 
         while let Some(c) = input_str.next() {  // consuming each character and passing it to helper method
-            self.accept_helper(c, &mut clist);
+           matches = self.accept_helper(c, &mut clist);
         }
 
         if clist.len() > 0 {    // checks empty string against the states
@@ -75,6 +76,11 @@ impl NFA {
                 _ => continue,
             }
         }
+
+        if (!matches) & (input_length > 0) {
+            result = false;
+        }
+
         result
     }
 
@@ -97,9 +103,11 @@ impl NFA {
         }
     }
 
-    fn accept_helper(&self, input_char: char, c_states: &mut Vec<StateId>) {
+    fn accept_helper(&self, input_char: char, c_states: &mut Vec<StateId>) -> bool {
         let mut total_current_states = c_states.len();
         let mut i = 0;
+        let mut char_match = true;
+
         loop {
             if i == total_current_states {  // checking each state in the list of current states
                 break;
@@ -112,12 +120,14 @@ impl NFA {
                 State::Match(char_enum, Some(next_state_id)) => {
                     match char_enum {
                         Char::Literal(c) => {
+                            char_match = true;
                             if input_char == *c {
                                 c_states.push(*next_state_id);
                                 c_states.swap_remove(i);
                             }
                         },
                         Char::Any => {
+                            char_match = true;
                             c_states.push(*next_state_id);
                             c_states.swap_remove(i);
                         },
@@ -125,19 +135,24 @@ impl NFA {
                     i += 1; // if match state is ecountered, move to next state
                 },
                 State::Split(Some(left_state_id), Some(right_state_id)) => {
+                    char_match = true;
                     c_states.push(*left_state_id);  // push left state
                     c_states.swap_remove(i);        // replace split state with left state
                     c_states.push(*right_state_id); // push right state (doesnt replace anything)
                     total_current_states += 1;      // increase # total states by 1
 
                 },
-//                State::End => {
-//                    c_states.remove(i); // to be accepted, last char must be at end state
-//                    i += 1;
-//                },
-                _ => i += 1,
+                State::End => {
+                    char_match = true;
+                    i += 1;
+                },
+                _ => {
+                    i += 1;
+                    char_match = false;
+                }
             }
         }
+        char_match
     }
 }
 
