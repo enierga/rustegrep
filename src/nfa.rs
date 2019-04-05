@@ -2,8 +2,8 @@ pub mod helpers;
 
 // Starter code for PS06 - thegrep
 // 
-// Author(s): Vincent Enierga
-// ONYEN(s): venierga
+// Author(s): Vincent Enierga, Euael Ketema
+// ONYEN(s): venierga, esplash
 //
 // UNC Honor Pledge: I pledge I have received no unauthorized aid
 // on this assignment. I further pledge not to distribute my solution
@@ -56,7 +56,138 @@ impl NFA {
      * input is accepted by the input string.
      */
     pub fn accepts(&self, input: &str) -> bool {
-        false
+
+        // convert input string to vec
+        let mut char_vec: Vec<char> = input.chars().collect();
+        self.accept_helper(self.start, 0, char_vec)
+    
+    }
+      fn accept_helper(&self, id: StateId, idx: usize, string: Vec<char>) -> bool {
+        // need to clone string b/c it gets moved in the Split Case
+        let copy = string.clone();
+        match self.states[id] {
+            State::Start(Some(next)) => {
+                    return self.accept_helper(next, idx, string);
+                }
+
+            State::Match(Char::Literal(ch), Some(next)) => {
+                if (idx < string.len()) {
+                    if (string[idx] == ch){
+                        return self.accept_helper(next, idx + 1, string);
+                    } else {
+                        return false
+                    }
+                } else {
+                    return false
+                }
+            }
+            State::Match(Char::Any, Some(next)) =>{
+                if (idx < string.len()) {
+                    return self.accept_helper(next, idx + 1, string);
+                } else {
+                    return false
+                }
+                
+            }
+            State::Split(Some(lhs),Some(rhs)) => {
+                return self.accept_helper(lhs, idx, string) || self.accept_helper(rhs, idx, copy);
+            }
+        
+            State::End => {
+                return true
+            }
+            _ => {
+                return false
+            }
+        }   
+      }
+    
+}
+
+/*
+ * Write Tests for Public API
+ */
+#[cfg(test)]
+mod nfa_tests {
+    use super::*;
+    
+    #[test]
+    fn single_char() {
+        let nfa = NFA::from("a*").unwrap();
+        let string = String::from("a");
+        assert_eq!(true,nfa.accepts(&string));
+    }
+
+    #[test]
+    fn single_fail() {
+        let nfa = NFA::from("a").unwrap();
+        let string = String::from("b");
+        assert_eq!(false, nfa.accepts(&string));
+    }
+
+    #[test]
+    fn rando() {
+        let nfa = NFA::from("(a|b)*").unwrap();
+        let 
+            string = String::from("ababa");
+        assert_eq!(true, nfa.accepts(&string));
+    }
+
+    #[test]
+    fn sandwich() {
+        let nfa = NFA::from("(.)*a(.)*").unwrap();
+        let string = String::from("....a...");
+        assert_eq!(true, nfa.accepts(&string));
+    }
+
+    #[test]
+    fn another_sammy() {
+        let nfa = NFA::from("(.*)a(.*)").unwrap();
+        let string = String::from("..a....");
+        assert_eq!(true, nfa.accepts(&string));
+    }
+
+    #[test]
+    fn sammy_with_letters() {
+        let nfa = NFA::from("a(.*)c").unwrap();
+        let string = String::from("a......c");
+        assert_eq!(true, nfa.accepts(&string));
+    }
+
+    #[test]
+    fn null_kleene_letter() {
+        let nfa = NFA::from("a(.*)c").unwrap();
+        let string = String::from("ac");
+        assert_eq!(true, nfa.accepts(&string));
+    }
+
+    #[test]
+    fn union_kleene() {
+        let nfa = NFA::from("(a|b)*(c|d)*").unwrap();
+        let string = String::from("");
+        assert_eq!(true, nfa.accepts(&string));
+    }
+
+    #[test]
+    fn union_kleene_two() {
+        let nfa = NFA::from("(a|b)*(c|d)*").unwrap();
+        let string = String::from("abad");
+        assert_eq!(true, nfa.accepts(&string));
+    }
+
+
+    #[test]
+    fn union_kleene_tres() {
+        let nfa = NFA::from("(a|b)*(c|d)*").unwrap();
+        let string = String::from("acbc");
+        assert_eq!(true, nfa.accepts(&string));
+    }
+
+    #[test]
+    fn union_kleene_quatro() {
+        let nfa = NFA::from("(a|b)*(c|d)*").unwrap();
+        let string = String::from("cabd");
+        assert_eq!(true, nfa.accepts(&string));
     }
 }
 
@@ -114,7 +245,7 @@ impl NFA {
             start:  0,
         }
     }
-
+   
     /**
      * Add a state to the NFA and get its arena ID back.
      */
