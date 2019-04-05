@@ -4,16 +4,21 @@ pub mod helpers;
 // 
 // Author(s): Vincent Enierga, Euael Ketema
 // ONYEN(s): venierga, esplash
+
+//
+// Author(s): Vincent Enierga
+// ONYEN(s): venierga
+
 //
 // UNC Honor Pledge: I pledge I have received no unauthorized aid
 // on this assignment. I further pledge not to distribute my solution
 // to this code to anyone other than the course staff and partner.
 //
 
+use self::State::*;
 use super::parser::Parser;
 use super::parser::AST;
 use super::tokenizer::Tokenizer;
-use self::State::*;
 
 /**
  * ===== Public API =====
@@ -56,6 +61,7 @@ impl NFA {
      * input is accepted by the input string.
      */
     pub fn accepts(&self, input: &str) -> bool {
+
 
         // convert input string to vec
         let mut char_vec: Vec<char> = input.chars().collect();
@@ -188,9 +194,10 @@ mod nfa_tests {
         let nfa = NFA::from("(a|b)*(c|d)*").unwrap();
         let string = String::from("cabd");
         assert_eq!(true, nfa.accepts(&string));
+
     }
 }
-
+    
 /**
  * ===== Internal API =====
  */
@@ -223,7 +230,7 @@ enum Char {
 
 /**
  * Internal representation of a fragment of an NFA being constructed
- * that keeps track of the start ID of the fragment as well as all of 
+ * that keeps track of the start ID of the fragment as well as all of
  * its unjoined end states.
  */
 #[derive(Debug)]
@@ -242,7 +249,7 @@ impl NFA {
     fn new() -> NFA {
         NFA {
             states: vec![],
-            start:  0,
+            start: 0,
         }
     }
    
@@ -267,21 +274,21 @@ impl NFA {
                     start: state,
                     ends: vec![state],
                 }
-            },
+            }
             AST::Char(c) => {
                 let state = self.add(Match(Char::Literal(*c), None));
                 Fragment {
                     start: state,
                     ends: vec![state],
                 }
-            },
+            }
             AST::Catenation(lhs, rhs) => self.cat_helper(lhs, rhs),
-            AST::Alternation(lhs,rhs) => {
+            AST::Alternation(lhs, rhs) => {
                 let ends = Vec::new();
                 self.alt_helper(lhs, rhs, ends)
-            },
+            }
             AST::Closure(ast) => self.clo_helper(ast),
-            node => panic!("Unimplemented branch of gen_fragment: {:?}", node)
+            node => panic!("Unimplemented branch of gen_fragment: {:?}", node),
         }
     }
 
@@ -315,10 +322,12 @@ impl NFA {
     fn cat_helper(&mut self, lhs: &AST, rhs: &AST) -> Fragment {
         let left = self.gen_fragment(lhs);
         let right = self.gen_fragment(rhs);
-        if right.start < self.states.len() { // leave last state unjoined so it can later be joing to end
+        if right.start < self.states.len() {
+            // leave last state unjoined so it can later be joined to end
             self.join_fragment(&left, right.start); // joining these two fragments together
         }
-        Fragment {  //  creating fragment that has left's start and right's end
+        Fragment {
+            //  creating fragment that has left's start and right's end
             start: left.start,
             ends: right.ends,
         }
@@ -329,7 +338,8 @@ impl NFA {
      */
     fn alt_helper(&mut self, lhs: &AST, rhs: &AST, mut ends: Vec<StateId>) -> Fragment {
         let left = self.gen_fragment(lhs);
-        for end in left.ends {  // this is meant to "collect" those lose ends from the fragments
+        for end in left.ends {
+            // this is meant to "collect" those loose ends from the fragments
             ends.push(end);
         }
         let right = self.gen_fragment(rhs);
@@ -347,13 +357,12 @@ impl NFA {
      * attempting closure helper here (closure = split state + match state)
      */
     fn clo_helper(&mut self, ast: &AST) -> Fragment {
-        let kleene_char = self.gen_fragment(ast);   // generate fragment for the closure ast
+        let kleene_char = self.gen_fragment(ast); // generate fragment for the closure ast
         let state = self.add(Split(Some(kleene_char.start), None)); // creating split state with match state at lhs
-        self.join_fragment(&kleene_char, state);    // join closure ast and split state
+        self.join_fragment(&kleene_char, state); // join closure ast and split state
         Fragment {
             start: state,
             ends: vec![state],
         }
     }
-
 }
