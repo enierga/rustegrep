@@ -62,7 +62,7 @@ fn eval(input: &str, options: &Options) {
         eval_tokens(input);
     }
 
-    let mut mod_input = "(.*)".to_owned();
+    let mut mod_input = String::new();
     mod_input.push_str(input);
     mod_input.push_str("(.*)");
 
