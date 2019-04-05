@@ -187,10 +187,10 @@ mod nfa_accepts {
     fn test_from_writeup() {
         let nfa = NFA::from("(.*)aut....a(.*)").unwrap();
         assert_eq!(nfa.accepts("Chautauqua"), true);
-//        assert_eq!(nfa.accepts("Chautauqua's"), true);
+        assert_eq!(nfa.accepts("Chautauqua's"), true);
         assert_eq!(nfa.accepts("automata"), true);
-//        assert_eq!(nfa.accepts("beautification"), true);
-//        assert_eq!(nfa.accepts("beautification's"), true);
+        assert_eq!(nfa.accepts("beautification"), true);
+        assert_eq!(nfa.accepts("beautification's"), true);
     }
 
     #[test]
