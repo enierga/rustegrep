@@ -1,9 +1,14 @@
 pub mod helpers;
 
 // Starter code for PS06 - thegrep
+// 
+// Author(s): Vincent Enierga, Euael Ketema
+// ONYEN(s): venierga, esplash
+
 //
 // Author(s): Vincent Enierga
 // ONYEN(s): venierga
+
 //
 // UNC Honor Pledge: I pledge I have received no unauthorized aid
 // on this assignment. I further pledge not to distribute my solution
@@ -126,24 +131,61 @@ impl NFA {
     }
 }
 
-/** Tests accepts method */
+/*
+ * Write Tests for Public API
+ */
 #[cfg(test)]
-mod nfa_accepts {
+mod nfa_tests {
     use super::*;
-
+    
     #[test]
-    fn any_char() {
-        let nfa = NFA::from(".").unwrap();
-        assert_eq!(nfa.accepts("a"), true);
-        assert_eq!(nfa.accepts("9"), true);
-        assert_eq!(nfa.accepts(""), false);
+    fn single_char() {
+        let nfa = NFA::from("a*").unwrap();
+        let string = String::from("a");
+        assert_eq!(true,nfa.accepts(&string));
     }
 
     #[test]
-    fn simple_cat() {
-        let nfa = NFA::from("ab").unwrap();
-        assert_eq!(nfa.accepts("a"), false);
-        assert_eq!(nfa.accepts("ab"), true);
+    fn single_fail() {
+        let nfa = NFA::from("a").unwrap();
+        let string = String::from("b");
+        assert_eq!(false, nfa.accepts(&string));
+    }
+
+    #[test]
+    fn rando() {
+        let nfa = NFA::from("(a|b)*").unwrap();
+        let 
+            string = String::from("ababa");
+        assert_eq!(true, nfa.accepts(&string));
+    }
+
+    #[test]
+    fn sandwich() {
+        let nfa = NFA::from("(.)*a(.)*").unwrap();
+        let string = String::from("....a...");
+        assert_eq!(true, nfa.accepts(&string));
+    }
+
+    #[test]
+    fn another_sammy() {
+        let nfa = NFA::from("(.*)a(.*)").unwrap();
+        let string = String::from("..a....");
+        assert_eq!(true, nfa.accepts(&string));
+    }
+
+    #[test]
+    fn sammy_with_letters() {
+        let nfa = NFA::from("a(.*)c").unwrap();
+        let string = String::from("a......c");
+        assert_eq!(true, nfa.accepts(&string));
+    }
+
+    #[test]
+    fn null_kleene_letter() {
+        let nfa = NFA::from("a(.*)c").unwrap();
+        let string = String::from("ac");
+        assert_eq!(true, nfa.accepts(&string));
     }
 
     #[test]
@@ -155,12 +197,19 @@ mod nfa_accepts {
     }
 
     #[test]
-    fn simple_closure() {
-        let nfa = NFA::from("a*").unwrap();
-        assert_eq!(nfa.accepts(""), true);
-        assert_eq!(nfa.accepts("a"), true);
-        assert_eq!(nfa.accepts("aaaaaaa"), true);
+    fn union_kleene() {
+        let nfa = NFA::from("(a|b)*(c|d)*").unwrap();
+        let string = String::from("");
+        assert_eq!(true, nfa.accepts(&string));
     }
+
+    #[test]
+    fn union_kleene_two() {
+        let nfa = NFA::from("(a|b)*(c|d)*").unwrap();
+        let string = String::from("abad");
+        assert_eq!(true, nfa.accepts(&string));
+    }
+
 
     #[test]
     fn clo_and_any() {
@@ -184,19 +233,31 @@ mod nfa_accepts {
     }
 
     #[test]
-    fn cat_and_any() {
-        let nfa = NFA::from("a.c").unwrap();
-        assert_eq!(nfa.accepts("abc"), true);
-        assert_eq!(nfa.accepts("a9c"), true);
+    fn union_kleene_tres() {
+        let nfa = NFA::from("(a|b)*(c|d)*").unwrap();
+        let string = String::from("acbc");
+        assert_eq!(true, nfa.accepts(&string));
     }
 
     #[test]
-    fn five_letter_starts_with_a() {
-        let nfa = NFA::from("a....").unwrap();
-        assert_eq!(nfa.accepts("apple"), true);
-        assert_eq!(nfa.accepts("apples"), false);
-        assert_eq!(nfa.accepts("ankle"), true);
-        assert_eq!(nfa.accepts("butts"), false);
+    fn union_kleene_quatro() {
+        let nfa = NFA::from("(a|b)*(c|d)*").unwrap();
+        let string = String::from("cabd");
+        assert_eq!(true, nfa.accepts(&string));
+    }
+
+    #[test]
+    fn concatenation_char() {
+        let nfa = NFA::from("bc").unwrap();
+        let string = String::from("abcd");
+        assert_eq!(false, nfa.accepts(&string));
+    }
+
+    #[test]
+    fn any_char_cat() {
+        let nfa = NFA::from(".a.").unwrap();
+        let string = String::from("asd");
+        assert_eq!(false, nfa.accepts(&string));
     }
 
     #[test]
@@ -206,8 +267,21 @@ mod nfa_accepts {
         assert_eq!(nfa.accepts("sale"), true);
     }
 
-}
+    #[test]
+    fn alter_and_cat() {
+        let nfa = NFA::from("a(x|y).").unwrap();
+        let string = String::from("axy");
+        assert_eq!(true, nfa.accepts(&string));
+    }
 
+    #[test]
+    fn simple_alternations() {
+        let nfa = NFA::from("a|b|c|d|e|1|2|3").unwrap();
+        let string = String::from("0a");
+        assert_eq!(false, nfa.accepts(&string));
+    }
+}
+    
 /**
  * ===== Internal API =====
  */
@@ -262,7 +336,7 @@ impl NFA {
             start: 0,
         }
     }
-
+   
     /**
      * Add a state to the NFA and get its arena ID back.
      */

@@ -161,45 +161,4 @@ impl<'str> Tokenizer<'str> {
     }
 }
 
-/** add tests for helper methods */
-#[cfg(test)]
-mod tokenizer_helpers{
-    use super::*;
 
-    #[test]
-    fn parentheses() {
-        let mut tokens = Tokenizer::new("()");
-        assert_eq!(tokens.paren(), Token::LParen);
-        assert_eq!(tokens.paren(), Token::RParen);
-        assert_eq!(tokens.next(), None);
-    }
-
-    #[test]
-    fn union() {
-        let mut tokens = Tokenizer::new("|");
-        assert_eq!(tokens.union(), Token::UnionBar);
-        assert_eq!(tokens.next(), None);
-    }
-
-    #[test]
-    fn kleene() {
-        let mut tokens = Tokenizer::new("*");
-        assert_eq!(tokens.kleene(), Token::KleeneStar);
-        assert_eq!(tokens.next(), None);
-    }
-
-    #[test]
-    fn any_char() {
-        let mut tokens = Tokenizer::new(".");
-        assert_eq!(tokens.any_char(), Token::AnyChar);
-        assert_eq!(tokens.next(), None);
-    }
-
-    #[test]
-    fn other_char() {
-        let mut tokens = Tokenizer::new("a");
-        assert_eq!(tokens.other_chars(), Token::Char('a'));
-        assert_eq!(tokens.next(), None);
-    }
-
-}
