@@ -56,106 +56,73 @@ impl NFA {
      * input is accepted by the input string.
      */
     pub fn accepts(&self, input: &str) -> bool {
-        let mut clist = vec![self.start];   // initialize with start StateId
-        let mut input_str = input.chars();
-        let input_length = input.chars().count();
-        let mut matches = true;
-
-        while let Some(c) = input_str.next() {  // consuming each character and passing it to helper method
-           matches = self.accept_helper(c, &mut clist);
-        }
-
-        if clist.len() > 0 {    // checks empty string against the states
-            self.empty_str(&mut clist);
-        }
-
         let mut result = false;
-        for state_id in clist { // checking for end state in the set of current lists
-            match &self.states[state_id] {
+        let mut chars = input.chars();
+        let mut c_states = vec![self.start];
+
+        // initializing current states with first state after start, if it exists
+        if let State::Start(Some(first_state)) = self.states[c_states[0]] {
+            c_states.push(first_state);
+            c_states.swap_remove(0);
+        }
+
+        // this is where main computation happens
+        self.accept_helper(input, &mut c_states);
+
+        // checks if there is an end state in resulting current states
+        for id in c_states {
+            match self.states[id] {
                 State::End => result = true,
                 _ => continue,
             }
         }
-
-        if (!matches) & (input_length > 0) {
-            result = false;
-        }
-
         result
     }
 
-    fn empty_str(&self, c_states: &mut Vec<StateId>) {
-        let mut i = 0;
-        while i < 2 {   // only want to loop 2x: to move out of start and to push arms of potential split state
-            match &self.states[c_states[i]] {   // only valid states for empty are start and split
-                State::Start(Some(first_state_id)) => {
-                    c_states.push(*first_state_id); // push first state
-                    c_states.swap_remove(i);
-                },
-                State::Split(Some(left_state_id), Some(right_state_id)) => {    // if closure, empty string can be accepted
-                    c_states.push(*left_state_id);
-                    c_states.swap_remove(i);
-                    c_states.push(*right_state_id);
-                    i += 1;
-                },
-                _ => break, // otherwise break loop and empty string not accepted
-            }
-        }
-    }
-
-    fn accept_helper(&self, input_char: char, c_states: &mut Vec<StateId>) -> bool {
-        let mut total_current_states = c_states.len();
-        let mut i = 0;
-        let mut char_match = true;
+    // returns next set of current states
+    fn accept_helper(&self, input: &str, c_states: &mut Vec<StateId>) {
+        let mut input_string = input.chars();
 
         loop {
-            if i == total_current_states {  // checking each state in the list of current states
-                break;
-            }
-            match &self.states[c_states[i]] {
-                State::Start(Some(first_state_id)) => {
-                    c_states.push(*first_state_id); // push the first state
-                    c_states.swap_remove(i);        // replace the start state with the first state
-                },
-                State::Match(char_enum, Some(next_state_id)) => {
-                    match char_enum {
-                        Char::Literal(c) => {
-                            char_match = true;
-                            if input_char == *c {
-                                c_states.push(*next_state_id);
-                                c_states.swap_remove(i);
+            let mut character = input_string.next();
+            let mut cstate_index = 0;
+            let mut total_states = c_states.len();
+            while cstate_index < total_states {
+                match &self.states[c_states[cstate_index]] {
+                    State::Match(char_enum, Some(next_state)) => {
+                        if let Some(current_char) = character {
+                            match char_enum {
+                                Char::Literal(c) => {
+                                    if current_char == *c {
+                                        c_states.push(*next_state);
+                                        c_states.swap_remove(cstate_index);
+                                    }
+                                }
+                                Char::Any => {
+                                    c_states.push(*next_state);
+                                    c_states.swap_remove(cstate_index);
+                                }
                             }
-                        },
-                        Char::Any => {
-                            char_match = true;
-                            c_states.push(*next_state_id);
-                            c_states.swap_remove(i);
-                        },
+                        }
+                        cstate_index += 1;
                     }
-                    i += 1; // if match state is ecountered, move to next state
-                },
-                State::Split(Some(left_state_id), Some(right_state_id)) => {
-                    char_match = true;
-                    c_states.push(*left_state_id);  // push left state
-                    c_states.swap_remove(i);        // replace split state with left state
-                    c_states.push(*right_state_id); // push right state (doesnt replace anything)
-                    total_current_states += 1;      // increase # total states by 1
-
-                },
-                State::End => {
-                    char_match = true;
-                    if c_states.len() == 1 {
-                        c_states.remove(i);
+                    State::Split(Some(left_state), Some(right_state)) => {
+                        c_states.push(*left_state);
+                        c_states.swap_remove(cstate_index);
+                        c_states.push(*right_state);
+                        total_states += 1;
                     }
-                    i += 1;
-                },
-                _ => {
-                    i += 1;
-                    char_match = false;
+                    State::End => {
+                        c_states.remove(cstate_index);
+                        total_states -= 1;
+                    }
+                    _ => break,
                 }
             }
+            if let None = character {
+                break;
+            }
         }
-        char_match
     }
 }
 
@@ -184,6 +151,7 @@ mod nfa_accepts {
         let nfa = NFA::from("a|b").unwrap();
         assert_eq!(nfa.accepts("a"), true);
         assert_eq!(nfa.accepts("b"), true);
+        assert_eq!(nfa.accepts("ab"), true);
     }
 
     #[test]
@@ -199,9 +167,13 @@ mod nfa_accepts {
         let nfa = NFA::from("(.*)a(.*)").unwrap();
         assert_eq!(nfa.accepts("a"), true);
         assert_eq!(nfa.accepts("poafs"), true);
-        assert_eq!(nfa.accepts("bruh fucking a ugh why isnt this working"), true);
+        assert_eq!(
+            nfa.accepts("bruh fucking a ugh why isnt this working"),
+            true
+        );
     }
 
+    #[test]
     fn test_from_writeup() {
         let nfa = NFA::from("(.*)aut....a(.*)").unwrap();
         assert_eq!(nfa.accepts("Chautauqua"), true);
@@ -228,7 +200,7 @@ mod nfa_accepts {
     }
 
     #[test]
-    fn cat_and_closure() {
+    fn cat_and_clo() {
         let nfa = NFA::from("s(.)*e").unwrap();
         assert_eq!(nfa.accepts("sunshine"), true);
         assert_eq!(nfa.accepts("sale"), true);
