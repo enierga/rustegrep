@@ -62,7 +62,8 @@ fn eval(input: &str, options: &Options) {
         eval_tokens(input);
     }
 
-    let mut mod_input = String::new();
+    // modifying input to allow pattern matching within strings
+    let mut mod_input = String::from("(.*)");
     mod_input.push_str(input);
     mod_input.push_str("(.*)");
 
