@@ -58,11 +58,12 @@ impl NFA {
     pub fn accepts(&self, input: &str) -> bool {
         let mut chars = input.chars();
 
-        // initialize current set of states with start state
+        // initialize current set of states with start state then step to 1st state
         let mut c_states = vec![self.start];
         let mut n_states = self.nstate_gen(None, c_states);
 
         // this is where main computation happens
+        // (its an iterative solution with a mild sprinkling of recursion)
         if !input.is_empty() {
             while let Some(c) = chars.next() {
                 n_states = self.nstate_gen(Some(c), n_states);
@@ -71,6 +72,7 @@ impl NFA {
             n_states = self.nstate_gen(None, n_states);
         }
 
+        // remedies the anychar* sandwich problem
         n_states = self.nstate_gen(None, n_states);
 
         // checks if there is an end state in resulting current states
@@ -90,6 +92,7 @@ impl NFA {
             match &self.states[current] {
                 State::Start(Some(first_state)) => n_states.push(*first_state),
                 State::Match(char_enum, Some(next_state)) => {
+                    // only run match state arm if there is an input char
                     if let Some(character) = input_char {
                         match *char_enum {
                             Char::Literal(c) => {
@@ -102,6 +105,7 @@ impl NFA {
                     }
                 },
                 State::Split(Some(lnext_state), Some(rnext_state)) => {
+                    // if split state, test each split arm for matching the current char
                     for state in self.nstate_gen(input_char, vec![*rnext_state]) {
                         n_states.push(state);
                     }
@@ -110,6 +114,7 @@ impl NFA {
                     }
                 },
                 _ => {
+                    // push current state if nothing matches because its a current state anyway
                     n_states.push(current);
                     break;
                 }
