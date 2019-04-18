@@ -4,11 +4,6 @@ pub mod helpers;
 // 
 // Author(s): Vincent Enierga, Euael Ketema
 // ONYEN(s): venierga, esplash
-
-//
-// Author(s): Vincent Enierga
-// ONYEN(s): venierga
-
 //
 // UNC Honor Pledge: I pledge I have received no unauthorized aid
 // on this assignment. I further pledge not to distribute my solution
@@ -61,139 +56,120 @@ impl NFA {
      * input is accepted by the input string.
      */
     pub fn accepts(&self, input: &str) -> bool {
-        let mut result = false;
         let mut chars = input.chars();
-        let mut c_states = vec![self.start];
 
-        // initializing current states with first state after start, if it exists
-        if let State::Start(Some(first_state)) = self.states[c_states[0]] {
-            c_states.push(first_state);
-            c_states.swap_remove(0);
-        }
+        // initialize current set of states with start state
+        let mut c_states = vec![self.start];
+        let mut n_states = self.nstate_gen(None, c_states);
 
         // this is where main computation happens
-        self.accept_helper(input, &mut c_states);
+        if !input.is_empty() {
+            while let Some(c) = chars.next() {
+                n_states = self.nstate_gen(Some(c), n_states);
+            }
+        } else {
+            n_states = self.nstate_gen(None, n_states);
+        }
+
+        n_states = self.nstate_gen(None, n_states);
 
         // checks if there is an end state in resulting current states
-        for id in c_states {
+        for id in n_states {
             match self.states[id] {
-                State::End => result = true,
+                State::End => return true,
                 _ => continue,
             }
         }
-        result
+        false
     }
 
-    // returns next set of current states
-    fn accept_helper(&self, input: &str, c_states: &mut Vec<StateId>) {
-        let mut input_string = input.chars();
+    fn nstate_gen(&self, input_char: Option<char>, c_states: Vec<StateId>) -> Vec<StateId> {
+        let mut n_states = Vec::new();
 
-        loop {
-            let mut character = input_string.next();
-            let mut cstate_index = 0;
-            let mut total_states = c_states.len();
-            while cstate_index < total_states {
-                match &self.states[c_states[cstate_index]] {
-                    State::Match(char_enum, Some(next_state)) => {
-                        if let Some(current_char) = character {
-                            match char_enum {
-                                Char::Literal(c) => {
-                                    if current_char == *c {
-                                        c_states.push(*next_state);
-                                        c_states.swap_remove(cstate_index);
-                                    }
+        for current in c_states {
+            match &self.states[current] {
+                State::Start(Some(first_state)) => n_states.push(*first_state),
+                State::Match(char_enum, Some(next_state)) => {
+                    if let Some(character) = input_char {
+                        match *char_enum {
+                            Char::Literal(c) => {
+                                if character == c {
+                                    n_states.push(*next_state);
                                 }
-                                Char::Any => {
-                                    c_states.push(*next_state);
-                                    c_states.swap_remove(cstate_index);
-                                }
-                            }
+                            },
+                            Char::Any => n_states.push(*next_state),
                         }
-                        cstate_index += 1;
                     }
-                    State::Split(Some(left_state), Some(right_state)) => {
-                        c_states.push(*left_state);
-                        c_states.swap_remove(cstate_index);
-                        c_states.push(*right_state);
-                        total_states += 1;
+                },
+                State::Split(Some(lnext_state), Some(rnext_state)) => {
+                    for state in self.nstate_gen(input_char, vec![*rnext_state]) {
+                        n_states.push(state);
                     }
-                    State::End => {
-                        c_states.remove(cstate_index);
-                        total_states -= 1;
+                    for state in self.nstate_gen(input_char, vec![*lnext_state]) {
+                        n_states.push(state);
                     }
-                    _ => break,
+                },
+                _ => {
+                    n_states.push(current);
+                    break;
                 }
             }
-            if let None = character {
-                break;
-            }
         }
+        n_states
     }
+
 }
+
+
 
 /*
  * Write Tests for Public API
  */
 #[cfg(test)]
-mod nfa_tests {
+mod nfa_accepts {
     use super::*;
     
     #[test]
     fn single_char() {
-        let nfa = NFA::from("a*").unwrap();
-        let string = String::from("a");
-        assert_eq!(true,nfa.accepts(&string));
-    }
-
-    #[test]
-    fn single_fail() {
         let nfa = NFA::from("a").unwrap();
-        let string = String::from("b");
-        assert_eq!(false, nfa.accepts(&string));
+        assert_eq!(true, nfa.accepts("a"));
+        assert_eq!(false, nfa.accepts(""));
     }
 
     #[test]
-    fn rando() {
+    fn simple_closure() {
+        let nfa = NFA::from("a*").unwrap();
+        assert_eq!(true, nfa.accepts("a"));
+        assert_eq!(true, nfa.accepts(""));
+        assert_eq!(true, nfa.accepts("aaaaaaaaaa"));
+    }
+
+    #[test]
+    fn any_closure() {
+        let nfa = NFA::from(".*").unwrap();
+        assert_eq!(true, nfa.accepts(""));
+        assert_eq!(true, nfa.accepts("bruhhh"));
+    }
+
+    #[test]
+    fn simple_catentation() {
+        let nfa = NFA::from("ab").unwrap();
+        let string = String::from("ab");
+        assert_eq!(true, nfa.accepts(&string));
+    }
+
+    #[test]
+    fn alternating_closure() {
         let nfa = NFA::from("(a|b)*").unwrap();
-        let 
-            string = String::from("ababa");
+        let string = String::from("ababa");
         assert_eq!(true, nfa.accepts(&string));
     }
 
     #[test]
-    fn sandwich() {
-        let nfa = NFA::from("(.)*a(.)*").unwrap();
-        let string = String::from("....a...");
-        assert_eq!(true, nfa.accepts(&string));
-    }
-
-    #[test]
-    fn another_sammy() {
-        let nfa = NFA::from("(.*)a(.*)").unwrap();
-        let string = String::from("..a....");
-        assert_eq!(true, nfa.accepts(&string));
-    }
-
-    #[test]
-    fn sammy_with_letters() {
-        let nfa = NFA::from("a(.*)c").unwrap();
-        let string = String::from("a......c");
-        assert_eq!(true, nfa.accepts(&string));
-    }
-
-    #[test]
-    fn null_kleene_letter() {
-        let nfa = NFA::from("a(.*)c").unwrap();
-        let string = String::from("ac");
-        assert_eq!(true, nfa.accepts(&string));
-    }
-
-    #[test]
-    fn simple_alt() {
+    fn simple_alternation() {
         let nfa = NFA::from("a|b").unwrap();
         assert_eq!(nfa.accepts("a"), true);
         assert_eq!(nfa.accepts("b"), true);
-        assert_eq!(nfa.accepts("ab"), true);
     }
 
     #[test]
@@ -204,17 +180,8 @@ mod nfa_tests {
     }
 
     #[test]
-    fn union_kleene_two() {
-        let nfa = NFA::from("(a|b)*(c|d)*").unwrap();
-        let string = String::from("abad");
-        assert_eq!(true, nfa.accepts(&string));
-    }
-
-
-    #[test]
-    fn clo_and_any() {
+    fn closure_sandwich() {
         let nfa = NFA::from("(.*)a(.*)").unwrap();
-        assert_eq!(nfa.accepts("a"), true);
         assert_eq!(nfa.accepts("poafs"), true);
         assert_eq!(
             nfa.accepts("bruh fucking a ugh why isnt this working"),
@@ -240,31 +207,18 @@ mod nfa_tests {
     }
 
     #[test]
-    fn union_kleene_quatro() {
-        let nfa = NFA::from("(a|b)*(c|d)*").unwrap();
-        let string = String::from("cabd");
-        assert_eq!(true, nfa.accepts(&string));
-    }
-
-    #[test]
-    fn concatenation_char() {
-        let nfa = NFA::from("bc").unwrap();
-        let string = String::from("abcd");
-        assert_eq!(false, nfa.accepts(&string));
-    }
-
-    #[test]
-    fn any_char_cat() {
+    fn any_char_catenation() {
         let nfa = NFA::from(".a.").unwrap();
         let string = String::from("asd");
         assert_eq!(false, nfa.accepts(&string));
     }
 
     #[test]
-    fn cat_and_clo() {
-        let nfa = NFA::from("s(.)*e").unwrap();
+    fn sammy_with_letters() {
+        let nfa = NFA::from("s(.*)e").unwrap();
         assert_eq!(nfa.accepts("sunshine"), true);
         assert_eq!(nfa.accepts("sale"), true);
+        assert_eq!(nfa.accepts("s......e"), true);
     }
 
     #[test]
@@ -274,12 +228,6 @@ mod nfa_tests {
         assert_eq!(true, nfa.accepts(&string));
     }
 
-    #[test]
-    fn simple_alternations() {
-        let nfa = NFA::from("a|b|c|d|e|1|2|3").unwrap();
-        let string = String::from("0a");
-        assert_eq!(false, nfa.accepts(&string));
-    }
 }
     
 /**
