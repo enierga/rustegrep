@@ -81,7 +81,7 @@ impl StringGen {
 
     fn rand_closure(&self, rand_string: &mut String, ast: &AST) {
         let mut rng = rand::thread_rng();
-        let rand_int = rng.gen::<u32>();
+        let rand_int = rng.gen_range(0, 50);
 
         for i in 0..rand_int {
             rand_string.push_str(&self.string_factory(&ast));

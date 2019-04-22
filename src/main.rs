@@ -144,7 +144,7 @@ fn eval_gen(input: &str, number: usize) {
     match StringGen::generate(input, number) {
         Ok(fine) => {
             for string in fine {
-                println!("{:?}", string);
+                println!("{}", string);
             }
         }
         Err(error) => eprintln!("thegrep: {}", error),

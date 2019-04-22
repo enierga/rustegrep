@@ -116,7 +116,7 @@ impl<'str> Tokenizer<'str> {
     fn whitespace(&mut self) {
         while let Some(c) = self.chars.peek() {
             match c {
-                ' ' | '\t' | '\n' => self.chars.next(),
+                '\t' | '\n' => self.chars.next(),
                 _ => break,
             };
         }
