@@ -15,9 +15,10 @@ const EXIT_OK: i32 = 0;
 const EXIT_ERR: i32 = 1;
 
 pub mod nfa;
-use self::nfa::NFA;
 use self::nfa::helpers::nfa_dot;
+use self::nfa::NFA;
 use std::io;
+use std::process;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -32,6 +33,9 @@ struct Options {
     #[structopt(short = "t", long = "tokens")]
     /// Show Tokens
     tokens: bool,
+    #[structopt(short = "g", long = "gen")]
+    /// Show n Acceptable Strings
+    n: Option<usize>,
 
     /// Regular Expression Pattern
     pattern: String,
@@ -44,6 +48,8 @@ pub mod tokenizer;
 use self::tokenizer::Tokenizer;
 pub mod parser;
 use self::parser::Parser;
+pub mod string_gen;
+use self::string_gen::StringGen;
 
 fn main() {
     let options = Options::from_args();
@@ -60,6 +66,9 @@ fn eval(input: &str, options: &Options) {
     }
     if options.tokens {
         eval_tokens(input);
+    }
+    if let Some(number) = options.n {
+        eval_gen(input, number);
     }
 
     // modifying input to allow pattern matching within strings
@@ -129,4 +138,16 @@ fn eval_dot(input: &str) {
     let nfa = NFA::from(&input).unwrap();
     println!("{}", nfa_dot(&nfa));
     std::process::exit(0);
+}
+
+fn eval_gen(input: &str, number: usize) {
+    match StringGen::generate(input, number) {
+        Ok(fine) => {
+            for string in fine {
+                println!("{:?}", string);
+            }
+        }
+        Err(error) => eprintln!("thegrep: {}", error),
+    }
+    process::exit(EXIT_OK);
 }
