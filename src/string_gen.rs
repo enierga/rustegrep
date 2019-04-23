@@ -11,6 +11,7 @@
  *
  */
 
+use super::nfa::NFA;
 use super::parser::Parser;
 use super::parser::AST;
 use super::tokenizer::Tokenizer;
@@ -89,4 +90,69 @@ impl StringGen {
     }
 
 
+}
+
+#[cfg(test)]
+mod string_gen {
+    use super::*;
+
+    #[test]
+    fn rand_anychar() {
+        let regex = ".";
+        let nfa = NFA::from(regex).unwrap();
+        let rand_strings = StringGen::generate(regex, 3).unwrap();
+        for string in rand_strings {
+            assert_eq!(nfa.accepts(&string), true);
+        }
+    }
+
+    #[test]
+    fn rand_alternation() {
+        let regex = "a|b";
+        let nfa = NFA::from(regex).unwrap();
+        let rand_strings = StringGen::generate(regex, 3).unwrap();
+        for string in rand_strings {
+            assert_eq!(nfa.accepts(&string), true);
+        }
+    }
+
+    #[test]
+    fn rand_closure() {
+        let regex = "a*";
+        let nfa = NFA::from(regex).unwrap();
+        let rand_strings = StringGen::generate(regex, 3).unwrap();
+        for string in rand_strings {
+            assert_eq!(nfa.accepts(&string), true);
+        }
+    }
+
+    #[test]
+    fn rand_string1() {
+        let regex = "big* chungus*";
+        let nfa = NFA::from(regex).unwrap();
+        let rand_strings = StringGen::generate(regex, 3).unwrap();
+        for string in rand_strings {
+            assert_eq!(nfa.accepts(&string), true);
+        }
+    }
+
+    #[test]
+    fn rand_string2() {
+        let regex = "(ass*)|(booty*) eaters*";
+        let nfa = NFA::from(regex).unwrap();
+        let rand_strings = StringGen::generate(regex, 3).unwrap();
+        for string in rand_strings {
+            assert_eq!(nfa.accepts(&string), true);
+        }
+    }
+
+    #[test]
+    fn rand_string3() {
+        let regex = "hi, my name .....";
+        let nfa = NFA::from(regex).unwrap();
+        let rand_strings = StringGen::generate(regex, 3).unwrap();
+        for string in rand_strings {
+            assert_eq!(nfa.accepts(&string), true);
+        }
+    }
 }
