@@ -343,9 +343,11 @@ mod nfa_accepts {
 
     #[test]
     fn alter_and_cat() {
-        let nfa = NFA::from("a(x|y).").unwrap();
-        let string = String::from("axy");
-        assert_eq!(true, nfa.accepts(&string));
+        let nfa = NFA::from("a(x|y)+").unwrap();
+        assert_eq!(nfa.accepts("ax"), true);
+        assert_eq!(nfa.accepts("axxx"), true);
+        assert_eq!(nfa.accepts("a"), false);
+        assert_eq!(nfa.accepts("ayyy"), true);
     }
 
 }
