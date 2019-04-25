@@ -53,6 +53,7 @@ impl StringGen {
             AST::Catenation(lhs, rhs) => self.rand_catenation(&mut rand_string, lhs, rhs),
             AST::Alternation(lhs, rhs) => self.rand_alternation(&mut rand_string, lhs, rhs),
             AST::Closure(clo) => self.rand_closure(&mut rand_string, clo),
+            AST::OneOrMore(plus) => self.rand_plus(&mut rand_string, plus),
         }
         rand_string
     }
@@ -87,6 +88,16 @@ impl StringGen {
         for i in 0..rand_int {
             rand_string.push_str(&self.string_factory(&ast));
         }
+    }
+
+    fn rand_plus(&self, rand_string: &mut String, ast: &AST) {
+        let mut rng = rand::thread_rng();
+        let rand_int = rng.gen_range(1, 50);
+
+        for i in 0..rand_int {
+            rand_string.push_str(&self.string_factory(&ast));
+        }
+
     }
 
 

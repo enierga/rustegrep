@@ -14,6 +14,7 @@ pub enum Token {
     KleeneStar,
     AnyChar,
     Char(char),
+    KleenePlus,
 }
 
 pub struct Tokenizer<'str> {
@@ -39,6 +40,7 @@ impl<'str> Iterator for Tokenizer<'str> {
                 '|' => self.union(),
                 '*' => self.kleene(),
                 '.' => self.any_char(),
+                '+' => self.kleene_plus(),
                 _ => self.other_chars(),
             })
         } else {
@@ -97,8 +99,16 @@ mod tokenizer {
     }
 
     #[test]
+    fn kleene_plus() {
+        let mut tokens = Tokenizer::new("a+");
+        assert_eq!(tokens.next(), Some(Token::Char('a')));
+        assert_eq!(tokens.next(), Some(Token::KleenePlus));
+        assert_eq!(tokens.next(), None);
+    }
+
+    #[test]
     fn all_tokens() {
-        let mut tokens = Tokenizer::new("(a|b).c*");
+        let mut tokens = Tokenizer::new("(a|b).c*+");
         assert_eq!(tokens.next(), Some(Token::LParen));
         assert_eq!(tokens.next(), Some(Token::Char('a')));
         assert_eq!(tokens.next(), Some(Token::UnionBar));
@@ -107,6 +117,7 @@ mod tokenizer {
         assert_eq!(tokens.next(), Some(Token::AnyChar));
         assert_eq!(tokens.next(), Some(Token::Char('c')));
         assert_eq!(tokens.next(), Some(Token::KleeneStar));
+        assert_eq!(tokens.next(), Some(Token::KleenePlus));
         assert_eq!(tokens.next(), None);
     }
 }
@@ -153,6 +164,14 @@ impl<'str> Tokenizer<'str> {
             panic!("Expected any char");
         }
         Token::AnyChar
+    }
+    
+    fn kleene_plus(&mut self) -> Token {
+        let c = self.chars.next().unwrap();
+        if c != '+' {
+            panic!("Expected Kleene plus");
+        }
+        Token::KleenePlus
     }
 
     fn other_chars(&mut self) -> Token {

@@ -74,7 +74,6 @@ fn eval(input: &str, options: &Options) {
     // modifying input to allow pattern matching within strings
     let mut mod_input = String::from("(.*)");
     mod_input.push_str(input);
-    mod_input.push_str("(.*)");
 
     let result = if options.paths.len() > 0 {
         print_files(&mod_input, options)

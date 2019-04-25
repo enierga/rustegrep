@@ -11,6 +11,7 @@ pub enum AST {
     Alternation(Box<AST>, Box<AST>),
     Catenation(Box<AST>, Box<AST>),
     Closure(Box<AST>),
+    OneOrMore(Box<AST>),
     Char(char),
     AnyChar
 }
@@ -26,6 +27,10 @@ pub fn cat(left: AST, right: AST) -> AST {
 
 pub fn clo(val: AST) -> AST {
     AST::Closure(Box::new(val))
+}
+
+pub fn plus(val: AST) -> AST {
+    AST::OneOrMore(Box::new(val))
 }
 
 pub fn cha(c: char) -> AST {
@@ -75,6 +80,12 @@ mod parser_parse {
     fn simple_clo() {
         let par = Parser::parse(Tokenizer::new("a*")).unwrap();
         assert_eq!(clo(cha('a')), par);
+    }
+
+    #[test]
+    fn simple_plus() {
+        let par = Parser::parse(Tokenizer::new("a+")).unwrap();
+        assert_eq!(plus(cha('a')), par);
     }
 
     #[test]
@@ -139,7 +150,7 @@ impl <'tokens> Parser<'tokens> {
         }
     }
 
-    // Closure ::= Atom [KleeneStar]?
+    // Closure ::= Atom [KleeneStar|KleenePlus]?
     fn closure(&mut self) -> Result<AST, String> {
         let atom_result = self.atom()?;
         if let Some(t) = self.tokens.peek() {
@@ -147,6 +158,10 @@ impl <'tokens> Parser<'tokens> {
                 Token::KleeneStar => {
                     self.consume_token(Token::KleeneStar);
                     Ok(clo(atom_result))
+                },
+                Token::KleenePlus => {
+                    self.consume_token(Token::KleenePlus);
+                    Ok(plus(atom_result))
                 },
                 _ => Ok(atom_result),
             }

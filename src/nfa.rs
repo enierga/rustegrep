@@ -1,7 +1,7 @@
 pub mod helpers;
 
 // Starter code for PS06 - thegrep
-// 
+//
 // Author(s): Vincent Enierga, Euael Ketema
 // ONYEN(s): venierga, esplash
 //
@@ -14,6 +14,7 @@ use self::State::*;
 use super::parser::Parser;
 use super::parser::AST;
 use super::tokenizer::Tokenizer;
+use std::ops;
 
 /**
  * ===== Public API =====
@@ -29,6 +30,113 @@ pub struct NFA {
     states: Vec<State>,
 }
 
+/**
+ * Overloading the add operator for the nfa
+ */
+
+impl ops::Add<NFA> for NFA {
+    type Output = NFA;
+
+    fn add(self, rhs: NFA) -> NFA {
+        let mut nfa = NFA::new();
+
+        // add all lhs states except end state
+        for state in self.states {
+            match state {
+                State::End => break,
+                _ => nfa.add_state(state),
+            };
+        }
+        
+        // each state in rhs should be pushed down by length of lhs - end state
+        let offset = nfa.states.len() - 1;
+
+        // adding rhs to returned nfa with offset; skip rhs start state
+        for state in rhs.states {
+            match state {
+                State::Start(Some(first_state)) => continue,
+                State::Match(c, Some(next_state)) => {
+                    nfa.add_state(Match(c, Some(next_state+offset)));
+                },
+                State::Split(Some(lnext_state), Some(rnext_state)) => {
+                    nfa.add_state(Split(Some(lnext_state+offset), Some(rnext_state+offset)));
+                },
+                State::End => {
+                    nfa.add_state(End);
+                },
+                _ => {},
+            }
+        }
+        
+        nfa
+    }
+}
+
+#[cfg(test)]
+mod add_op {
+    use super::*;
+
+    #[test]
+    fn add_cat() {
+        let sum = NFA::from("a").unwrap() + NFA::from("b").unwrap();
+        assert!(sum.accepts("ab"));
+        assert!(!sum.accepts("a"));
+        assert!(!sum.accepts("b"));
+    }
+
+    #[test]
+    fn add_cat_cat() {
+        let sum = NFA::from("ab").unwrap() + NFA::from("cd").unwrap();
+        assert!(sum.accepts("abcd"));
+        assert!(!sum.accepts("abs"));
+        assert!(sum.accepts("abcde"));
+    }
+
+    #[test]
+    fn add_cat_alt() {
+        let sum = NFA::from("a|b").unwrap() + NFA::from("c").unwrap();
+        assert!(sum.accepts("ac"));
+        assert!(sum.accepts("bc"));
+        assert!(!sum.accepts("abc"));
+    }
+
+    #[test]
+    fn add_alt_alt() {
+        let sum = NFA::from("a|b").unwrap() + NFA::from("d|c").unwrap();
+        assert!(sum.accepts("ac"));
+        assert!(sum.accepts("bd"));
+    }
+
+    #[test]
+    fn add_cat_clo() {
+        let sum = NFA::from("a").unwrap() + NFA::from("b*").unwrap();
+        assert!(sum.accepts("ab"));
+        assert!(sum.accepts("a"));
+        assert!(sum.accepts("abbbbbbbb"));
+        assert!(!sum.accepts("bbbb"));
+    }
+
+    #[test]
+    fn add_alt_clo() {
+        let sum = NFA::from("a|b").unwrap() + NFA::from("c*").unwrap();
+        assert!(sum.accepts("a"));
+        assert!(sum.accepts("b"));
+        assert!(sum.accepts("ac"));
+        assert!(sum.accepts("bc"));
+        assert!(sum.accepts("bccccccc"));
+        assert!(sum.accepts("accccccc"));
+    }
+
+    #[test]
+    fn add_clo_clo() {
+        let sum = NFA::from("a*").unwrap() + NFA::from("b*").unwrap();
+        assert!(sum.accepts("a"));
+        assert!(sum.accepts("b"));
+        assert!(sum.accepts("ab"));
+        assert!(sum.accepts("aabb"));
+    }
+}
+
 impl NFA {
     /**
      * Construct an NFA from a regular expression pattern.
@@ -36,7 +144,7 @@ impl NFA {
     pub fn from(regular_expression: &str) -> Result<NFA, String> {
         let mut nfa = NFA::new();
 
-        let start = nfa.add(Start(None));
+        let start = nfa.add_state(Start(None));
         nfa.start = start;
 
         // Parse the Abstract Syntax Tree of the Regular Expression
@@ -45,7 +153,7 @@ impl NFA {
         let body = nfa.gen_fragment(ast);
         nfa.join(nfa.start, body.start);
 
-        let end = nfa.add(End);
+        let end = nfa.add_state(End);
         nfa.join_fragment(&body, end);
 
         Ok(nfa)
@@ -99,11 +207,11 @@ impl NFA {
                                 if character == c {
                                     n_states.push(*next_state);
                                 }
-                            },
+                            }
                             Char::Any => n_states.push(*next_state),
                         }
                     }
-                },
+                }
                 State::Split(Some(lnext_state), Some(rnext_state)) => {
                     // if split state, test each split arm for matching the current char
                     for state in self.nstate_gen(input_char, vec![*rnext_state]) {
@@ -112,20 +220,16 @@ impl NFA {
                     for state in self.nstate_gen(input_char, vec![*lnext_state]) {
                         n_states.push(state);
                     }
-                },
+                }
                 _ => {
                     // push current state if nothing matches because its a current state anyway
                     n_states.push(current);
-                    break;
                 }
             }
         }
         n_states
     }
-
 }
-
-
 
 /*
  * Write Tests for Public API
@@ -133,7 +237,7 @@ impl NFA {
 #[cfg(test)]
 mod nfa_accepts {
     use super::*;
-    
+
     #[test]
     fn single_char() {
         let nfa = NFA::from("a").unwrap();
@@ -154,6 +258,14 @@ mod nfa_accepts {
         let nfa = NFA::from(".*").unwrap();
         assert_eq!(true, nfa.accepts(""));
         assert_eq!(true, nfa.accepts("bruhhh"));
+    }
+
+    #[test]
+    fn simple_plus() {
+        let nfa = NFA::from("a+").unwrap();
+        assert_eq!(true, nfa.accepts("a"));
+        assert_eq!(false, nfa.accepts(""));
+        assert_eq!(true, nfa.accepts("aaaa"));
     }
 
     #[test]
@@ -180,8 +292,10 @@ mod nfa_accepts {
     #[test]
     fn union_kleene() {
         let nfa = NFA::from("(a|b)*(c|d)*").unwrap();
-        let string = String::from("");
-        assert_eq!(true, nfa.accepts(&string));
+        assert_eq!(true, nfa.accepts("ac"));
+        assert_eq!(true, nfa.accepts("ad"));
+        assert_eq!(true, nfa.accepts("bc"));
+        assert_eq!(true, nfa.accepts(""));
     }
 
     #[test]
@@ -205,10 +319,11 @@ mod nfa_accepts {
     }
 
     #[test]
-    fn union_kleene_tres() {
-        let nfa = NFA::from("(a|b)*(c|d)*").unwrap();
-        let string = String::from("acbc");
-        assert_eq!(true, nfa.accepts(&string));
+    fn union_plus() {
+        let nfa = NFA::from("(a|b)+(c|d)+").unwrap();
+        assert_eq!(nfa.accepts("ad"), true);
+        assert_eq!(nfa.accepts("aad"), true);
+        assert_eq!(nfa.accepts("dd"), false);
     }
 
     #[test]
@@ -234,7 +349,7 @@ mod nfa_accepts {
     }
 
 }
-    
+
 /**
  * ===== Internal API =====
  */
@@ -289,11 +404,11 @@ impl NFA {
             start: 0,
         }
     }
-   
+
     /**
      * Add a state to the NFA and get its arena ID back.
      */
-    fn add(&mut self, state: State) -> StateId {
+    fn add_state(&mut self, state: State) -> StateId {
         let idx = self.states.len();
         self.states.push(state);
         idx
@@ -306,14 +421,14 @@ impl NFA {
     fn gen_fragment(&mut self, ast: &AST) -> Fragment {
         match ast {
             AST::AnyChar => {
-                let state = self.add(Match(Char::Any, None));
+                let state = self.add_state(Match(Char::Any, None));
                 Fragment {
                     start: state,
                     ends: vec![state],
                 }
             }
             AST::Char(c) => {
-                let state = self.add(Match(Char::Literal(*c), None));
+                let state = self.add_state(Match(Char::Literal(*c), None));
                 Fragment {
                     start: state,
                     ends: vec![state],
@@ -325,6 +440,7 @@ impl NFA {
                 self.alt_helper(lhs, rhs, ends)
             }
             AST::Closure(ast) => self.clo_helper(ast),
+            AST::OneOrMore(ast) => self.plus_helper(ast),
             node => panic!("Unimplemented branch of gen_fragment: {:?}", node),
         }
     }
@@ -383,7 +499,7 @@ impl NFA {
         for end in right.ends {
             ends.push(end);
         }
-        let state = self.add(Split(Some(left.start), Some(right.start))); // create split state with left + right
+        let state = self.add_state(Split(Some(left.start), Some(right.start))); // create split state with left + right
         Fragment {
             start: state,
             ends: ends,
@@ -395,10 +511,23 @@ impl NFA {
      */
     fn clo_helper(&mut self, ast: &AST) -> Fragment {
         let kleene_char = self.gen_fragment(ast); // generate fragment for the closure ast
-        let state = self.add(Split(Some(kleene_char.start), None)); // creating split state with match state at lhs
+        let state = self.add_state(Split(Some(kleene_char.start), None)); // creating split state with match state at lhs
         self.join_fragment(&kleene_char, state); // join closure ast and split state
         Fragment {
             start: state,
+            ends: vec![state],
+        }
+    }
+
+    /**
+     * one or more = match state + split state (lhs points back to match, rhs points forward)
+     */
+    fn plus_helper(&mut self, ast: &AST) -> Fragment {
+        let plus_char = self.gen_fragment(ast); // generating frag for oneormore ast
+        let state = self.add_state(Split(Some(plus_char.start), None)); // create split state with lhs pointing to match
+        self.join_fragment(&plus_char, state);
+        Fragment { // unlike in closure, the start of this fragment is at the oneormore frag
+            start: plus_char.start,
             ends: vec![state],
         }
     }
