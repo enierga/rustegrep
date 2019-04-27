@@ -43,7 +43,7 @@ impl StringGen {
         }
     }
 
-    // r e c u r s i v e - d e s c e n t
+    // r e c u r s i v e - d e s c e n t (of random string generation)
     fn string_factory(&self, ast: &AST) -> String {
         let mut rand_string = String::new();
 
@@ -138,6 +138,16 @@ mod string_gen {
     }
 
     #[test]
+    fn rand_plus() {
+        let regex = "a+";
+        let nfa = NFA::from(regex).unwrap();
+        let rand_strings = StringGen::generate(regex, 3).unwrap();
+        for string in rand_strings {
+            assert_eq!(nfa.accepts(&string), true);
+        }
+    }
+
+    #[test]
     fn rand_string1() {
         let regex = "big* chungus*";
         let nfa = NFA::from(regex).unwrap();
@@ -159,7 +169,7 @@ mod string_gen {
 
     #[test]
     fn rand_string3() {
-        let regex = "hi, my name .....";
+        let regex = "hi, my name is (.....)+";
         let nfa = NFA::from(regex).unwrap();
         let rand_strings = StringGen::generate(regex, 3).unwrap();
         for string in rand_strings {

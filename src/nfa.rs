@@ -180,7 +180,7 @@ impl NFA {
             n_states = self.nstate_gen(None, n_states);
         }
 
-        // remedies the anychar* sandwich problem
+        // acts as a '.*' at the end of a regex
         n_states = self.nstate_gen(None, n_states);
 
         // checks if there is an end state in resulting current states
